@@ -169,7 +169,8 @@ class S3DataAccess:
         (default ``data/tab/checkpoints``).  This mirrors the layout produced by
         :meth:`upload_checkpoints`.
 
-        Already-downloaded checkpoints are not re-downloaded (simple existence check).
+        A ``.download_complete`` marker file is written after a successful download so
+        that partially-failed downloads are not mistakenly served from the cache.
 
         :param local_relative_path: Path as used in model code, e.g.
             ``"ts_benchmark/baselines/pre_train/checkpoints/Moment-large"`` or
@@ -185,13 +186,13 @@ class S3DataAccess:
             remainder = norm
 
         checkpoints_prefix = self._checkpoints_prefix.strip("/")
-        s3_prefix = f"{checkpoints_prefix}/{remainder}"
+        # Normalise s3_prefix: strip trailing slash to avoid mismatches
+        s3_prefix = f"{checkpoints_prefix}/{remainder}".rstrip("/")
         local_dest = _TMP_CHECKPOINT_DIR / remainder
 
-        # Cache: non-empty directory or existing file → skip download
-        if local_dest.exists() and (
-            local_dest.is_file() or (local_dest.is_dir() and any(local_dest.iterdir()))
-        ):
+        # Cache: a marker file written after a previous successful download
+        marker = _TMP_CHECKPOINT_DIR / (remainder + ".download_complete")
+        if marker.exists():
             return local_dest
 
         objects = self.list_objects(s3_prefix)
@@ -203,15 +204,23 @@ class S3DataAccess:
 
         for obj in objects:
             key = obj["Key"]
-            if key == s3_prefix:
+            # Strip trailing slash from key for comparison (S3 "directory" markers)
+            key_norm = key.rstrip("/")
+            if key_norm == s3_prefix:
                 # Single file whose key exactly matches the prefix
                 local_dest.parent.mkdir(parents=True, exist_ok=True)
                 self.download_file(key, local_dest)
             else:
                 # Directory: key starts with s3_prefix + "/"
                 rel = key[len(s3_prefix):].lstrip("/")
+                if not rel:
+                    continue  # skip S3 "directory" placeholder objects
                 dest_file = local_dest / rel
                 self.download_file(key, dest_file)
+
+        # Write the marker only after all files have been downloaded successfully
+        marker.parent.mkdir(parents=True, exist_ok=True)
+        marker.touch()
 
         return local_dest
 

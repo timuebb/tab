@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import io
 import logging
 import os
 import tempfile
@@ -329,6 +328,9 @@ class S3DataSource(DataSource):
                 local_file = os.path.join(tmp_dir, filename)
                 self._s3.download_file(key, local_file)
                 try:
+                    # get_covariate() loads the data fully into memory (e.g. scipy
+                    # sparse matrix), so the temp file can be safely deleted when
+                    # the context manager exits.
                     covariates[filename] = get_covariate(local_file)
                 except Exception as exc:
                     logger.warning("Error reading covariate %s: %s", filename, exc)
