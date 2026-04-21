@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from timm.layers import DropPath, Mlp
 from timm.layers.helpers import to_2tuple
 from torch import nn
+from ts_benchmark.utils.s3_utils import get_checkpoint_path
 
 def calculate_unfold_output_length(input_length, size, step):
     num_windows = (input_length - size) // step + 1
@@ -968,7 +969,7 @@ class UniTS(nn.Module):
         args, configs_list = self.generate_units_default_args(self.dataset)
         self.model = Model(args, configs_list, pretrain=False)
         
-        pretrain_weight_path = "ts_benchmark/baselines/pre_train/checkpoints/units/units_x32_pretrain_checkpoint.pth"
+        pretrain_weight_path = get_checkpoint_path("ts_benchmark/baselines/pre_train/checkpoints/units/units_x32_pretrain_checkpoint.pth")
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         state_dict = torch.load(pretrain_weight_path, map_location=device)['student']

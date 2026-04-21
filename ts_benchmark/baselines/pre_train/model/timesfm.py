@@ -9,6 +9,7 @@ import torch.nn as nn
 from einops import rearrange
 
 import ts_benchmark.baselines.pre_train.model.pytorch_patched_decoder as ppd
+from ts_benchmark.utils.s3_utils import get_checkpoint_path
 
 
 class TimesFmTorch(nn.Module):
@@ -144,7 +145,7 @@ class TimesFM(nn.Module):
         model_config = Configs(
            context_len=config.seq_len,
            horizon_len=config.pred_len,
-           checkpoint="ts_benchmark/baselines/pre_train/checkpoints/timesfm/torch_model.ckpt",
+           checkpoint=get_checkpoint_path("ts_benchmark/baselines/pre_train/checkpoints/timesfm/torch_model.ckpt"),
         )
 
         self.model = TimesFmTorch(model_config)

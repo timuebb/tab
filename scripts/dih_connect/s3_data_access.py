@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import io
 import os
 import sys
 from pathlib import Path
@@ -11,6 +12,7 @@ except ImportError:
     from backports.zoneinfo import ZoneInfo
 
 import boto3
+import pandas as pd
 import polars as pl
 from botocore.config import Config
 from botocore.exceptions import ClientError
@@ -27,6 +29,12 @@ PROJECT_ROOT = SCRIPT_DIR.parent.parent
 DEFAULT_LOCAL_DATASET_DIR = PROJECT_ROOT / "dataset"
 
 TIMEZONE = ZoneInfo(os.environ.get("APP_TIMEZONE", "Europe/Berlin"))
+
+# Local directory prefix that is stripped when mapping checkpoint paths to S3 keys
+_LOCAL_CHECKPOINT_PREFIX = "ts_benchmark/baselines/"
+
+# Root temp directory for downloaded checkpoints
+_TMP_CHECKPOINT_DIR = Path("/tmp/tab_checkpoints")
 
 
 def _convert_datetimes_to_timezone(lf: pl.LazyFrame, timezone: ZoneInfo) -> pl.LazyFrame:
@@ -69,6 +77,8 @@ class S3DataAccess:
         self._region = os.environ.get("DIH_S3_REGION", "eu-central-1")
         self._bucket = os.environ.get("DIH_S3_BUCKET_NAME", "ka-etu-dih-001-oktoplustim-001")
         self._verify_ssl = os.environ.get("DIH_S3_VERIFY_SSL", "True").lower() == "true"
+        self._checkpoints_prefix = os.environ.get("DIH_S3_CHECKPOINTS_PREFIX", "data/tab/checkpoints")
+        self._dataset_prefix = os.environ.get("DIH_S3_DATASET_PREFIX", "data/tab/dataset")
 
         self._STORAGE_OPTIONS = {
             "ENDPOINT_URL": self._endpoint,
@@ -80,6 +90,34 @@ class S3DataAccess:
 
         self._s3_client = None
         self._overwrite_mode = "ask"
+
+    @property
+    def bucket(self) -> str:
+        """The S3 bucket name."""
+        return self._bucket
+
+    @property
+    def dataset_prefix(self) -> str:
+        """The S3 prefix used for dataset objects (value of ``DIH_S3_DATASET_PREFIX``)."""
+        return self._dataset_prefix
+
+    @property
+    def checkpoints_prefix(self) -> str:
+        """The S3 prefix used for checkpoints (value of ``DIH_S3_CHECKPOINTS_PREFIX``)."""
+        return self._checkpoints_prefix
+
+    def list_objects(self, prefix: str) -> list:
+        """Lists all S3 objects whose key starts with *prefix*.
+
+        :param prefix: S3 key prefix to filter by.
+        :return: List of S3 object dictionaries as returned by ``list_objects_v2``.
+        """
+        client = self._get_s3_client()
+        paginator = client.get_paginator("list_objects_v2")
+        objects = []
+        for page in paginator.paginate(Bucket=self._bucket, Prefix=prefix):
+            objects.extend(page.get("Contents", []))
+        return objects
 
     def read_data(self, path: str) -> pl.LazyFrame:
         table = DeltaTable(path, storage_options=self._STORAGE_OPTIONS)
@@ -101,6 +139,81 @@ class S3DataAccess:
                 ),
             )
         return self._s3_client
+
+    def read_csv(self, s3_key: str) -> pd.DataFrame:
+        """Reads a CSV file directly from S3 and returns it as a pandas DataFrame.
+
+        :param s3_key: Full S3 object key of the CSV file.
+        :return: DataFrame with the CSV contents.
+        """
+        obj = self._get_s3_client().get_object(Bucket=self._bucket, Key=s3_key)
+        return pd.read_csv(io.BytesIO(obj["Body"].read()))
+
+    def download_file(self, s3_key: str, local_path: str | Path) -> Path:
+        """Downloads a single S3 object to a local file.
+
+        :param s3_key: Full S3 object key.
+        :param local_path: Destination file path (parent directories are created as needed).
+        :return: The resolved local path.
+        """
+        local_path = Path(local_path)
+        local_path.parent.mkdir(parents=True, exist_ok=True)
+        self._get_s3_client().download_file(self._bucket, s3_key, str(local_path))
+        return local_path
+
+    def download_checkpoint(self, local_relative_path: str) -> Path:
+        """Downloads a checkpoint file or directory from S3 to a local temp location.
+
+        The S3 key is derived from *local_relative_path* by stripping the well-known
+        ``ts_benchmark/baselines/`` prefix and prepending ``DIH_S3_CHECKPOINTS_PREFIX``
+        (default ``data/tab/checkpoints``).  This mirrors the layout produced by
+        :meth:`upload_checkpoints`.
+
+        Already-downloaded checkpoints are not re-downloaded (simple existence check).
+
+        :param local_relative_path: Path as used in model code, e.g.
+            ``"ts_benchmark/baselines/pre_train/checkpoints/Moment-large"`` or
+            ``"ts_benchmark/baselines/LLM/checkpoints/gpt2"``.
+        :return: Local :class:`~pathlib.Path` pointing to the downloaded checkpoint.
+        :raises FileNotFoundError: When no S3 objects are found under the computed prefix.
+        """
+        norm = local_relative_path.replace("\\", "/").lstrip("/")
+
+        if norm.startswith(_LOCAL_CHECKPOINT_PREFIX):
+            remainder = norm[len(_LOCAL_CHECKPOINT_PREFIX):]
+        else:
+            remainder = norm
+
+        checkpoints_prefix = self._checkpoints_prefix.strip("/")
+        s3_prefix = f"{checkpoints_prefix}/{remainder}"
+        local_dest = _TMP_CHECKPOINT_DIR / remainder
+
+        # Cache: non-empty directory or existing file → skip download
+        if local_dest.exists() and (
+            local_dest.is_file() or (local_dest.is_dir() and any(local_dest.iterdir()))
+        ):
+            return local_dest
+
+        objects = self.list_objects(s3_prefix)
+
+        if not objects:
+            raise FileNotFoundError(
+                f"No S3 objects found under s3://{self._bucket}/{s3_prefix}"
+            )
+
+        for obj in objects:
+            key = obj["Key"]
+            if key == s3_prefix:
+                # Single file whose key exactly matches the prefix
+                local_dest.parent.mkdir(parents=True, exist_ok=True)
+                self.download_file(key, local_dest)
+            else:
+                # Directory: key starts with s3_prefix + "/"
+                rel = key[len(s3_prefix):].lstrip("/")
+                dest_file = local_dest / rel
+                self.download_file(key, dest_file)
+
+        return local_dest
 
     def _set_overwrite_mode(self, overwrite_mode: str) -> None:
         if overwrite_mode not in {"ask", "all", "none"}:
@@ -286,6 +399,26 @@ class S3DataAccess:
             target_prefix=target_prefix,
             dry_run=dry_run,
         )
+
+
+def get_checkpoint_path(local_relative_path: str) -> str:
+    """Returns the path to a model checkpoint, downloading from S3 when needed.
+
+    When the environment variable ``USE_S3_CHECKPOINTS`` is set to ``1``, ``true``,
+    or ``yes``, this function creates an :class:`S3DataAccess` instance, downloads
+    the checkpoint to ``/tmp/tab_checkpoints/``, and returns the local path.
+
+    Otherwise it returns *local_relative_path* unchanged so that existing local
+    workflows are not affected.
+
+    :param local_relative_path: Path relative to the project root, e.g.
+        ``"ts_benchmark/baselines/LLM/checkpoints/gpt2"``.
+    :return: Resolved path as a string suitable for passing to model loaders.
+    """
+    if os.environ.get("USE_S3_CHECKPOINTS", "").lower() not in ("1", "true", "yes"):
+        return local_relative_path
+    access = S3DataAccess()
+    return str(access.download_checkpoint(local_relative_path))
 
 
 def main() -> int:

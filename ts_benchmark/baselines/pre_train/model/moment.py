@@ -7,6 +7,7 @@ from einops import rearrange
 from torch import nn
 
 from momentfm import MOMENTPipeline
+from ts_benchmark.utils.s3_utils import get_checkpoint_path
 
 class Moment(nn.Module):
 
@@ -24,7 +25,7 @@ class Moment(nn.Module):
 
         self.model = MOMENTPipeline.from_pretrained(
             # "AutonLab/MOMENT-1-large",
-            "ts_benchmark/baselines/pre_train/checkpoints/Moment-large",
+            get_checkpoint_path("ts_benchmark/baselines/pre_train/checkpoints/Moment-large"),
             model_kwargs={"task_name": "reconstruction"},
         )
         self.model.init()

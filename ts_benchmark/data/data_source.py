@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+import io
 import logging
 import os
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, Dict, NoReturn, List
 
@@ -12,7 +14,7 @@ from ts_benchmark.common.constant import (
     ST_FORECASTING_DATASET_PATH,
 )
 from ts_benchmark.data.dataset import Dataset
-from ts_benchmark.data.utils import load_series_info, read_data, read_covariates
+from ts_benchmark.data.utils import load_series_info, read_data, read_covariates, get_covariate
 
 logger = logging.getLogger(__name__)
 
@@ -220,3 +222,136 @@ class LocalAnomalyDetectDataSource(LocalDataSource):
             ANOMALY_DETECT_DATASET_PATH,
             "DETECT_META.csv",
         )
+
+
+class S3DataSource(DataSource):
+    """
+    A data source that reads time-series data directly from an S3 bucket.
+
+    Series metadata and CSV data files are streamed from S3 without writing
+    them to the local filesystem.  Binary covariate files (e.g. ``.npz``) are
+    downloaded to a temporary directory because the underlying loaders require
+    a file path.
+
+    Authentication and endpoint configuration are taken from the same
+    environment variables used by :class:`scripts.dih_connect.s3_data_access.S3DataAccess`:
+    ``DIH_S3_ENDPOINT``, ``DIH_S3_TOKEN``, ``DIH_S3_SECRET``, ``DIH_S3_REGION``,
+    ``DIH_S3_BUCKET_NAME``.  The S3 prefix for the dataset is read from
+    ``DIH_S3_DATASET_PREFIX`` (default ``data/tab/dataset``).
+    """
+
+    #: index column name of the metadata
+    _INDEX_COL = "file_name"
+
+    #: name of the data folder inside the S3 prefix
+    _DATA_FOLDER_NAME = "data"
+
+    #: name of the covariates folder inside the S3 prefix
+    _COVARIATES_FOLDER_NAME = "covariates"
+
+    def __init__(self, s3_dataset_subpath: str, metadata_file_name: str):
+        """
+        Initializer.
+
+        Only metadata is loaded during construction; series data are loaded on demand.
+
+        :param s3_dataset_subpath: Sub-path appended to ``DIH_S3_DATASET_PREFIX`` to
+            locate the dataset, e.g. ``"forecasting"``.
+        :param metadata_file_name: Name of the metadata CSV file, e.g.
+            ``"FORECAST_META.csv"``.
+        """
+        from scripts.dih_connect.s3_data_access import S3DataAccess
+
+        self._s3 = S3DataAccess()
+        dataset_prefix = self._s3.dataset_prefix.strip("/")
+        self._s3_prefix = f"{dataset_prefix}/{s3_dataset_subpath}"
+        self._metadata_file_name = metadata_file_name
+        metadata = self._load_metadata()
+        super().__init__({}, {}, metadata)
+
+    def _s3_key(self, *parts: str) -> str:
+        """Builds an S3 key by joining the dataset prefix with *parts*."""
+        return "/".join([self._s3_prefix.rstrip("/")] + list(parts))
+
+    def _load_metadata(self) -> pd.DataFrame:
+        """Loads metadata from S3."""
+        key = self._s3_key(self._metadata_file_name)
+        metadata = self._s3.read_csv(key)
+        metadata.set_index(self._INDEX_COL, drop=False, inplace=True)
+        return metadata
+
+    def load_series_list(self, series_list: List[str]) -> NoReturn:
+        logger.info("Start loading %s series in parallel from S3", len(series_list))
+        data_dict = {}
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(self._load_series, series_name)
+                for series_name in series_list
+            ]
+        for future, series_name in zip(futures, series_list):
+            data_dict[series_name] = future.result()
+
+        covariate_dict = {}
+        with ThreadPoolExecutor() as executor:
+            futures = [
+                executor.submit(self._load_covariates, series_name)
+                for series_name in series_list
+            ]
+        for future, series_name in zip(futures, series_list):
+            covariate_dict[series_name] = future.result()
+        logger.info("Data loading from S3 finished.")
+        self.dataset.update_data(data_dict, covariate_dict)
+
+    def _load_series(self, series_name: str) -> pd.DataFrame:
+        """Streams a series CSV directly from S3."""
+        key = self._s3_key(self._DATA_FOLDER_NAME, series_name)
+        raw_df = self._s3.read_csv(key)
+        from ts_benchmark.data.utils import is_st, process_data_df, process_data_np
+        if is_st(raw_df):
+            return process_data_np(raw_df)
+        return process_data_df(raw_df)
+
+    def _load_covariates(self, series_name: str) -> Optional[Dict]:
+        """Downloads binary covariate files from S3 into a temp directory."""
+        series_name_without_extension = os.path.splitext(series_name)[0]
+        prefix = self._s3_key(self._COVARIATES_FOLDER_NAME, series_name_without_extension)
+
+        objects = self._s3.list_objects(prefix + "/")
+
+        if not objects:
+            return None
+
+        covariates = {}
+        with tempfile.TemporaryDirectory(prefix="tab_covariates_") as tmp_dir:
+            for obj in objects:
+                key = obj["Key"]
+                filename = os.path.basename(key)
+                local_file = os.path.join(tmp_dir, filename)
+                self._s3.download_file(key, local_file)
+                try:
+                    covariates[filename] = get_covariate(local_file)
+                except Exception as exc:
+                    logger.warning("Error reading covariate %s: %s", filename, exc)
+
+        return covariates if covariates else None
+
+
+class S3ForecastingDataSource(S3DataSource):
+    """S3-backed data source for the forecasting task."""
+
+    def __init__(self):
+        super().__init__("forecasting", "FORECAST_META.csv")
+
+
+class S3StForecastingDataSource(S3DataSource):
+    """S3-backed data source for the spatial-temporal forecasting task."""
+
+    def __init__(self):
+        super().__init__("st_forecasting", "ST_FORECAST_META.csv")
+
+
+class S3AnomalyDetectDataSource(S3DataSource):
+    """S3-backed data source for the anomaly detection task."""
+
+    def __init__(self):
+        super().__init__("anomaly_detect", "DETECT_META.csv")
