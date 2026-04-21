@@ -1,0 +1,5 @@
+polars[rtcompat]==1.8.2
+deltalake==0.20.2
+pyarrow==17.0.0
+python-dotenv==1.0.1
+backports.zoneinfo==0.2.1
