@@ -12,6 +12,7 @@ import torch
 from ts_benchmark.baselines.pre_train.submodules.chronos import ChronosBoltPipeline
 from einops import rearrange
 from torch import nn
+from ts_benchmark.utils.s3_utils import get_checkpoint_path
 
 class Chronos(nn.Module):
     def __init__(
@@ -30,7 +31,7 @@ class Chronos(nn.Module):
         # Load Chronos
         self.pipeline = ChronosBoltPipeline.from_pretrained(
             # "amazon/chronos-bolt-{}".format(model_size),
-            "ts_benchmark/baselines/pre_train/checkpoints/chronos",
+            get_checkpoint_path("ts_benchmark/baselines/pre_train/checkpoints/chronos"),
             device_map="cuda",
             torch_dtype=torch.bfloat16,
         )

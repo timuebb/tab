@@ -10,6 +10,7 @@ from transformers.models.gpt2.modeling_gpt2 import GPT2Model
 from transformers.models.gpt2.configuration_gpt2 import GPT2Config
 from transformers import BertTokenizer, BertModel
 from einops import rearrange
+from ts_benchmark.utils.s3_utils import get_checkpoint_path
 # from layers.Embed import DataEmbedding, DataEmbedding_wo_time
 
 
@@ -32,7 +33,7 @@ class Model(nn.Module):
         # self.enc_embedding = DataEmbedding(configs.enc_in * self.patch_size, configs.d_model, configs.embed, configs.freq,
         #                                    configs.dropout)
 
-        self.gpt2 = GPT2Model.from_pretrained('ts_benchmark/baselines/LLM/checkpoints/gpt2', output_attentions=True, output_hidden_states=True)
+        self.gpt2 = GPT2Model.from_pretrained(get_checkpoint_path('ts_benchmark/baselines/LLM/checkpoints/gpt2'), output_attentions=True, output_hidden_states=True)
         self.gpt2.h = self.gpt2.h[:configs.gpt_layers]
         
         for i, (name, param) in enumerate(self.gpt2.named_parameters()):

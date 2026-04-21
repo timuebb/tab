@@ -125,12 +125,22 @@ DEFAULT_LLM_BASED_HYPER_PARAMS = {
 }
 
 class LLMConfig:
+    # Config keys whose values are local checkpoint paths that should be
+    # downloaded from S3 when USE_S3_CHECKPOINTS is active.
+    _CHECKPOINT_PATH_KEYS = {"llm_path", "tokenizer_path", "word_embedding_path"}
+
     def __init__(self, **kwargs):
         for key, value in DEFAULT_LLM_BASED_HYPER_PARAMS.items():
             setattr(self, key, value)
 
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+        from ts_benchmark.utils.s3_utils import get_checkpoint_path
+        for key in self._CHECKPOINT_PATH_KEYS:
+            value = getattr(self, key, None)
+            if value:
+                setattr(self, key, get_checkpoint_path(value))
 
     @property
     def pred_len(self):

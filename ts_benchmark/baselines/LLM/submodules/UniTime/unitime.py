@@ -7,6 +7,7 @@ import torch.nn.functional as F
 
 from unitimegpt2 import UniTimeGPT2
 from transformers import GPT2Tokenizer, GPT2Config
+from ts_benchmark.utils.s3_utils import get_checkpoint_path
 
 class FlattenHead(nn.Module):
     def __init__(self, fea_num, pred_len, head_dropout):
@@ -35,13 +36,13 @@ class UniTime(nn.Module):
         if args.pretrain:
             # self.tokenizer = GPT2Tokenizer.from_pretrained('openai-community/gpt2')
             # self.backbone = UniTimeGPT2.from_pretrained('openai-community/gpt2')
-            self.tokenizer = GPT2Tokenizer.from_pretrained('ts_benchmark/baselines/LLM/checkpoints/gpt2')
-            self.backbone = UniTimeGPT2.from_pretrained('ts_benchmark/baselines/LLM/checkpoints/gpt2')
+            self.tokenizer = GPT2Tokenizer.from_pretrained(get_checkpoint_path('ts_benchmark/baselines/LLM/checkpoints/gpt2'))
+            self.backbone = UniTimeGPT2.from_pretrained(get_checkpoint_path('ts_benchmark/baselines/LLM/checkpoints/gpt2'))
         else:
             print("------------------no pretrain------------------")
             self.backbone = UniTimeGPT2(GPT2Config())
             self.tokenizer = GPT2Tokenizer.from_pretrained(
-                    'ts_benchmark/baselines/LLM/checkpoints/gpt2',
+                    get_checkpoint_path('ts_benchmark/baselines/LLM/checkpoints/gpt2'),
                     load_weights=False,
                 )
             # print(self.backbone.state_dict().values())

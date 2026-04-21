@@ -6,6 +6,7 @@ import sys
 sys.path.insert(0, 'ts_benchmark/baselines/pre_train/submodules/Timer')
 # from ts_benchmark. models import Timer
 from ts_benchmark.baselines.pre_train.submodules.Timer.models import Timer
+from ts_benchmark.utils.s3_utils import get_checkpoint_path
 
 
 class TimerModel(nn.Module):
@@ -29,7 +30,7 @@ class TimerModel(nn.Module):
         class TimerConfig:
             def __init__(self):
                 self.task_name = 'anomaly_detection'
-                self.ckpt_path = 'ts_benchmark/baselines/pre_train/checkpoints/timer/Timer_anomaly_detection_1.0.ckpt'
+                self.ckpt_path = get_checkpoint_path('ts_benchmark/baselines/pre_train/checkpoints/timer/Timer_anomaly_detection_1.0.ckpt')
                 self.patch_len =  96
                 self.d_model = 256
                 self.d_ff = 512

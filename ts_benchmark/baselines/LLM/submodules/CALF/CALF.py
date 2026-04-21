@@ -3,6 +3,7 @@ import torch.nn as nn
 from einops import rearrange
 from peft import LoraConfig, TaskType, get_peft_model
 from ts_benchmark.baselines.LLM.submodules.CALF.GPT2_arch import AccustumGPT2Model
+from ts_benchmark.utils.s3_utils import get_checkpoint_path
 
 class Encoder_PCA(nn.Module):
     def __init__(self, input_dim, word_embedding, hidden_dim=768, num_heads=12, num_encoder_layers=1):
@@ -53,8 +54,8 @@ class Model(nn.Module):
     
         self.task_name = configs.task_name
     
-        self.gpt2 = AccustumGPT2Model.from_pretrained('ts_benchmark/baselines/LLM/checkpoints/gpt2', output_attentions=True, output_hidden_states=True)  # loads a pretrained GPT-2 base model
-        self.gpt2_text = AccustumGPT2Model.from_pretrained('ts_benchmark/baselines/LLM/checkpoints/gpt2', output_attentions=True, output_hidden_states=True)  # loads a pretrained GPT-2 base model
+        self.gpt2 = AccustumGPT2Model.from_pretrained(get_checkpoint_path('ts_benchmark/baselines/LLM/checkpoints/gpt2'), output_attentions=True, output_hidden_states=True)  # loads a pretrained GPT-2 base model
+        self.gpt2_text = AccustumGPT2Model.from_pretrained(get_checkpoint_path('ts_benchmark/baselines/LLM/checkpoints/gpt2'), output_attentions=True, output_hidden_states=True)  # loads a pretrained GPT-2 base model
 
         self.gpt2.h = self.gpt2.h[:configs.gpt_layers]
         self.gpt2_text.h = self.gpt2_text.h[:configs.gpt_layers]
