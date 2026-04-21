@@ -5,6 +5,7 @@ import io
 import os
 import sys
 from pathlib import Path
+from typing import List, Optional, Union
 
 try:
     from zoneinfo import ZoneInfo
@@ -106,7 +107,7 @@ class S3DataAccess:
         """The S3 prefix used for checkpoints (value of ``DIH_S3_CHECKPOINTS_PREFIX``)."""
         return self._checkpoints_prefix
 
-    def list_objects(self, prefix: str) -> list:
+    def list_objects(self, prefix: str) -> List[dict]:
         """Lists all S3 objects whose key starts with *prefix*.
 
         :param prefix: S3 key prefix to filter by.
@@ -149,7 +150,7 @@ class S3DataAccess:
         obj = self._get_s3_client().get_object(Bucket=self._bucket, Key=s3_key)
         return pd.read_csv(io.BytesIO(obj["Body"].read()))
 
-    def download_file(self, s3_key: str, local_path: str | Path) -> Path:
+    def download_file(self, s3_key: str, local_path: Union[str, Path]) -> Path:
         """Downloads a single S3 object to a local file.
 
         :param s3_key: Full S3 object key.
