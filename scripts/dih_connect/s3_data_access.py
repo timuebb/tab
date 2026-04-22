@@ -80,6 +80,7 @@ class S3DataAccess:
         self._verify_ssl = os.environ.get("DIH_S3_VERIFY_SSL", "True").lower() == "true"
         self._checkpoints_prefix = os.environ.get("DIH_S3_CHECKPOINTS_PREFIX", "data/tab/checkpoints")
         self._dataset_prefix = os.environ.get("DIH_S3_DATASET_PREFIX", "data/tab/dataset")
+        self._results_prefix = os.environ.get("DIH_S3_RESULTS_PREFIX", "data/tab/results")
 
         self._STORAGE_OPTIONS = {
             "ENDPOINT_URL": self._endpoint,
@@ -106,6 +107,11 @@ class S3DataAccess:
     def checkpoints_prefix(self) -> str:
         """The S3 prefix used for checkpoints (value of ``DIH_S3_CHECKPOINTS_PREFIX``)."""
         return self._checkpoints_prefix
+
+    @property
+    def results_prefix(self) -> str:
+        """The S3 prefix used for result files (value of ``DIH_S3_RESULTS_PREFIX``)."""
+        return self._results_prefix
 
     def list_objects(self, prefix: str) -> List[dict]:
         """Lists all S3 objects whose key starts with *prefix*.
@@ -394,6 +400,29 @@ class S3DataAccess:
 
         self._get_s3_client().upload_file(str(local_file), self._bucket, normalized_key)
         return str(local_file), normalized_key
+
+    def upload_result_file(
+            self,
+            local_path: str | Path,
+            s3_key: str,
+    ) -> tuple[str, str]:
+        """Uploads a single result file to S3, always overwriting any existing object.
+
+        Unlike :meth:`upload_file`, this method never prompts the user and always
+        overwrites the target key.  This is safe for benchmark result files because
+        they carry unique timestamp suffixes in their names.
+
+        :param local_path: Absolute path to the local result file.
+        :param s3_key: Full destination S3 key (without bucket name).
+        :return: Tuple of ``(local_path, s3_key)``.
+        :raises FileNotFoundError: When *local_path* does not exist.
+        """
+        local_path = Path(local_path)
+        if not local_path.is_file():
+            raise FileNotFoundError(f"Result file not found: {local_path}")
+        normalized_key = s3_key.strip("/")
+        self._get_s3_client().upload_file(str(local_path), self._bucket, normalized_key)
+        return str(local_path), normalized_key
 
     def upload_directory(
             self,

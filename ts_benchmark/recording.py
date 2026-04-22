@@ -21,6 +21,7 @@ from ts_benchmark.utils.compress import (
     get_compress_file_ext,
 )
 from ts_benchmark.utils.get_file_name import get_unique_file_suffix
+from ts_benchmark.utils.s3_utils import upload_result
 
 logger = logging.getLogger(__name__)
 
@@ -164,4 +165,6 @@ def save_log(
     record_filename = file_prefix + get_unique_file_suffix()
     file_path = os.path.join(result_path, record_filename)
 
-    return write_record_file(result_df, file_path, compress_method)
+    file_path = write_record_file(result_df, file_path, compress_method)
+    upload_result(file_path)
+    return file_path
