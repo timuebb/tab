@@ -68,7 +68,8 @@ def report(report_config: dict) -> None:
             ROOT_PATH, "result", save_path, report_config["leaderboard_file_name"]
         )
         leaderboard_df.to_csv(leaderboard_path, index=False)
+        upload_result(leaderboard_path)
     else:
         leaderboard_path = os.path.join(ROOT_PATH, "result", report_config["leaderboard_file_name"])
         leaderboard_df.to_csv(leaderboard_path, index=False)
-    upload_result(leaderboard_path)
+        upload_result(leaderboard_path)

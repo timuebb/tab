@@ -58,9 +58,13 @@ def upload_result(local_file_path: str) -> None:
     from ts_benchmark.common.constant import ROOT_PATH
 
     access = S3DataAccess()
-    result_root = os.path.join(ROOT_PATH, "result")
-    # Build an S3 key relative to the result root directory
-    rel_path = os.path.relpath(local_file_path, result_root)
+    result_root = os.path.realpath(os.path.join(ROOT_PATH, "result"))
+    abs_file = os.path.realpath(local_file_path)
+    if not abs_file.startswith(result_root + os.sep) and abs_file != result_root:
+        raise ValueError(
+            f"Result file {local_file_path!r} is not under the result directory {result_root!r}."
+        )
+    rel_path = os.path.relpath(abs_file, result_root)
     s3_key = "/".join(
         [access.results_prefix.strip("/")]
         + rel_path.replace("\\", "/").split("/")
