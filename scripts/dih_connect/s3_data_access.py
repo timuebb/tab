@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 import argparse
 import io
 import os
 import sys
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 try:
     from zoneinfo import ZoneInfo
@@ -53,7 +51,7 @@ def _should_skip_file(path: Path) -> bool:
     return path.name in skip_names or "__MACOSX" in path.parts
 
 
-def _resolve_local_path(path_value: str | Path) -> Path:
+def _resolve_local_path(path_value: Union[str, Path]) -> Path:
     path_value = Path(path_value).expanduser()
 
     if path_value.is_absolute():
@@ -309,7 +307,7 @@ class S3DataAccess:
             local_dir: Path,
             target_prefix: str,
             dry_run: bool = True,
-    ) -> dict[str, list[tuple[str, str]]]:
+    ) -> Dict[str, List[Tuple[str, str]]]:
         if not local_dir.exists():
             raise FileNotFoundError(f"Ordner nicht gefunden: {local_dir}")
         if not local_dir.is_dir():
@@ -348,7 +346,7 @@ class S3DataAccess:
             dry_run: bool = True,
             target_prefix: str = "data/tab/checkpoints/",
             overwrite_mode: str = "ask",
-    ) -> dict[str, list[tuple[str, str]]]:
+    ) -> Dict[str, List[Tuple[str, str]]]:
         llm_dir = PROJECT_ROOT / "ts_benchmark" / "baselines" / "LLM" / "checkpoints"
         pre_train_dir = PROJECT_ROOT / "ts_benchmark" / "baselines" / "pre_train" / "checkpoints"
 
@@ -379,11 +377,11 @@ class S3DataAccess:
 
     def upload_file(
             self,
-            local_file: str | Path,
+            local_file: Union[str, Path],
             target_key: str,
             dry_run: bool = True,
             overwrite_mode: str = "ask",
-    ) -> tuple[str, str] | None:
+    ) -> Optional[Tuple[str, str]]:
         self._set_overwrite_mode(overwrite_mode)
 
         local_file = _resolve_local_path(local_file)
@@ -403,9 +401,9 @@ class S3DataAccess:
 
     def upload_result_file(
             self,
-            local_path: str | Path,
+            local_path: Union[str, Path],
             s3_key: str,
-    ) -> tuple[str, str]:
+    ) -> Tuple[str, str]:
         """Uploads a single result file to S3, always overwriting any existing object.
 
         Unlike :meth:`upload_file`, this method never prompts the user and always
@@ -426,11 +424,11 @@ class S3DataAccess:
 
     def upload_directory(
             self,
-            local_dir: str | Path,
+            local_dir: Union[str, Path],
             target_prefix: str = "data/tab/dataset/",
             dry_run: bool = True,
             overwrite_mode: str = "ask",
-    ) -> dict[str, list[tuple[str, str]]]:
+    ) -> Dict[str, List[Tuple[str, str]]]:
         self._set_overwrite_mode(overwrite_mode)
         local_dir = _resolve_local_path(local_dir)
         return self._upload_directory_impl(
