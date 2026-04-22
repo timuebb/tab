@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 import argparse
 import io
 import os
 import sys
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 try:
     from zoneinfo import ZoneInfo
@@ -53,7 +51,7 @@ def _should_skip_file(path: Path) -> bool:
     return path.name in skip_names or "__MACOSX" in path.parts
 
 
-def _resolve_local_path(path_value: str | Path) -> Path:
+def _resolve_local_path(path_value: Union[str, Path]) -> Path:
     path_value = Path(path_value).expanduser()
 
     if path_value.is_absolute():
@@ -80,6 +78,7 @@ class S3DataAccess:
         self._verify_ssl = os.environ.get("DIH_S3_VERIFY_SSL", "True").lower() == "true"
         self._checkpoints_prefix = os.environ.get("DIH_S3_CHECKPOINTS_PREFIX", "data/tab/checkpoints")
         self._dataset_prefix = os.environ.get("DIH_S3_DATASET_PREFIX", "data/tab/dataset")
+        self._results_prefix = os.environ.get("DIH_S3_RESULTS_PREFIX", "data/tab/results")
 
         self._STORAGE_OPTIONS = {
             "ENDPOINT_URL": self._endpoint,
@@ -106,6 +105,11 @@ class S3DataAccess:
     def checkpoints_prefix(self) -> str:
         """The S3 prefix used for checkpoints (value of ``DIH_S3_CHECKPOINTS_PREFIX``)."""
         return self._checkpoints_prefix
+
+    @property
+    def results_prefix(self) -> str:
+        """The S3 prefix used for result files (value of ``DIH_S3_RESULTS_PREFIX``)."""
+        return self._results_prefix
 
     def list_objects(self, prefix: str) -> List[dict]:
         """Lists all S3 objects whose key starts with *prefix*.
@@ -203,21 +207,34 @@ class S3DataAccess:
                 f"No S3 objects found under s3://{self._bucket}/{s3_prefix}"
             )
 
+        # Detect whether the prefix has child objects.  When S3 stores a
+        # directory-like checkpoint (e.g. gpt2/) it may emit a *placeholder*
+        # key that equals s3_prefix exactly (or with a trailing slash).  If
+        # real files exist beneath that prefix we must treat s3_prefix as a
+        # directory, not as a single file, otherwise the placeholder would be
+        # written to local_dest and the subsequent child files would fail
+        # because local_dest is already a file instead of a directory.
+        has_children = any(obj["Key"].rstrip("/") != s3_prefix for obj in objects)
+
         for obj in objects:
             key = obj["Key"]
             # Strip trailing slash from key for comparison (S3 "directory" markers)
             key_norm = key.rstrip("/")
             if key_norm == s3_prefix:
+                if has_children:
+                    # S3 directory placeholder — skip it; real files follow
+                    continue
                 # Single file whose key exactly matches the prefix
                 local_dest.parent.mkdir(parents=True, exist_ok=True)
                 self.download_file(key, local_dest)
-            else:
-                # Directory: key starts with s3_prefix + "/"
-                rel = key[len(s3_prefix):].lstrip("/")
-                if not rel:
-                    continue  # skip S3 "directory" placeholder objects
-                dest_file = local_dest / rel
-                self.download_file(key, dest_file)
+                continue
+
+            # Directory: key starts with s3_prefix + "/"
+            rel = key[len(s3_prefix):].lstrip("/")
+            if not rel:
+                continue  # skip S3 "directory" placeholder objects
+            dest_file = local_dest / rel
+            self.download_file(key, dest_file)
 
         # Write the marker only after all files have been downloaded successfully
         marker.parent.mkdir(parents=True, exist_ok=True)
@@ -303,7 +320,7 @@ class S3DataAccess:
             local_dir: Path,
             target_prefix: str,
             dry_run: bool = True,
-    ) -> dict[str, list[tuple[str, str]]]:
+    ) -> Dict[str, List[Tuple[str, str]]]:
         if not local_dir.exists():
             raise FileNotFoundError(f"Ordner nicht gefunden: {local_dir}")
         if not local_dir.is_dir():
@@ -342,7 +359,7 @@ class S3DataAccess:
             dry_run: bool = True,
             target_prefix: str = "data/tab/checkpoints/",
             overwrite_mode: str = "ask",
-    ) -> dict[str, list[tuple[str, str]]]:
+    ) -> Dict[str, List[Tuple[str, str]]]:
         llm_dir = PROJECT_ROOT / "ts_benchmark" / "baselines" / "LLM" / "checkpoints"
         pre_train_dir = PROJECT_ROOT / "ts_benchmark" / "baselines" / "pre_train" / "checkpoints"
 
@@ -373,11 +390,11 @@ class S3DataAccess:
 
     def upload_file(
             self,
-            local_file: str | Path,
+            local_file: Union[str, Path],
             target_key: str,
             dry_run: bool = True,
             overwrite_mode: str = "ask",
-    ) -> tuple[str, str] | None:
+    ) -> Optional[Tuple[str, str]]:
         self._set_overwrite_mode(overwrite_mode)
 
         local_file = _resolve_local_path(local_file)
@@ -395,13 +412,83 @@ class S3DataAccess:
         self._get_s3_client().upload_file(str(local_file), self._bucket, normalized_key)
         return str(local_file), normalized_key
 
+    def upload_result_file(
+            self,
+            local_path: Union[str, Path],
+            s3_key: str,
+    ) -> Tuple[str, str]:
+        """Uploads a single result file to S3, always overwriting any existing object.
+
+        Unlike :meth:`upload_file`, this method never prompts the user and always
+        overwrites the target key.  This is safe for benchmark result files because
+        they carry unique timestamp suffixes in their names.
+
+        :param local_path: Absolute path to the local result file.
+        :param s3_key: Full destination S3 key (without bucket name).
+        :return: Tuple of ``(local_path, s3_key)``.
+        :raises FileNotFoundError: When *local_path* does not exist.
+        """
+        local_path = Path(local_path)
+        if not local_path.is_file():
+            raise FileNotFoundError(f"Result file not found: {local_path}")
+        normalized_key = s3_key.strip("/")
+        self._get_s3_client().upload_file(str(local_path), self._bucket, normalized_key)
+        return str(local_path), normalized_key
+
+    def upload_result_directory(
+            self,
+            local_dir: Union[str, Path],
+            target_prefix: Optional[str] = None,
+    ) -> Dict[str, List[Tuple[str, str]]]:
+        """Uploads all result files in a local directory to S3.
+
+        Walks *local_dir* recursively and uploads every file to S3 under
+        *target_prefix* (defaults to :attr:`results_prefix`).  Always
+        overwrites existing objects — safe because result filenames carry
+        unique timestamp suffixes.
+
+        :param local_dir: Local directory containing result files.
+        :param target_prefix: S3 key prefix to upload under.  Defaults to
+            ``DIH_S3_RESULTS_PREFIX`` (``data/tab/results``).
+        :return: Dict with ``"uploaded"`` and ``"skipped"`` lists of
+            ``(local_path, s3_key)`` tuples.
+        :raises NotADirectoryError: When *local_dir* does not exist or is not
+            a directory.
+        """
+        local_dir = Path(local_dir)
+        if not local_dir.is_dir():
+            raise NotADirectoryError("Result directory not found: {0}".format(local_dir))
+
+        if target_prefix is None:
+            target_prefix = self._results_prefix
+
+        normalized_prefix = target_prefix.strip("/")
+        summary = {
+            "uploaded": [],
+            "skipped": [],
+        }  # type: Dict[str, List[Tuple[str, str]]]
+
+        for path in sorted(local_dir.rglob("*")):
+            if not path.is_file():
+                continue
+            if _should_skip_file(path):
+                summary["skipped"].append((str(path), ""))
+                continue
+
+            relative_path = path.relative_to(local_dir).as_posix()
+            target_key = "{0}/{1}".format(normalized_prefix, relative_path)
+            self._get_s3_client().upload_file(str(path), self._bucket, target_key)
+            summary["uploaded"].append((str(path), target_key))
+
+        return summary
+
     def upload_directory(
             self,
-            local_dir: str | Path,
+            local_dir: Union[str, Path],
             target_prefix: str = "data/tab/dataset/",
             dry_run: bool = True,
             overwrite_mode: str = "ask",
-    ) -> dict[str, list[tuple[str, str]]]:
+    ) -> Dict[str, List[Tuple[str, str]]]:
         self._set_overwrite_mode(overwrite_mode)
         local_dir = _resolve_local_path(local_dir)
         return self._upload_directory_impl(
