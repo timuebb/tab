@@ -207,21 +207,34 @@ class S3DataAccess:
                 f"No S3 objects found under s3://{self._bucket}/{s3_prefix}"
             )
 
+        # Detect whether the prefix has child objects.  When S3 stores a
+        # directory-like checkpoint (e.g. gpt2/) it may emit a *placeholder*
+        # key that equals s3_prefix exactly (or with a trailing slash).  If
+        # real files exist beneath that prefix we must treat s3_prefix as a
+        # directory, not as a single file, otherwise the placeholder would be
+        # written to local_dest and the subsequent child files would fail
+        # because local_dest is already a file instead of a directory.
+        has_children = any(obj["Key"].rstrip("/") != s3_prefix for obj in objects)
+
         for obj in objects:
             key = obj["Key"]
             # Strip trailing slash from key for comparison (S3 "directory" markers)
             key_norm = key.rstrip("/")
             if key_norm == s3_prefix:
+                if has_children:
+                    # S3 directory placeholder — skip it; real files follow
+                    continue
                 # Single file whose key exactly matches the prefix
                 local_dest.parent.mkdir(parents=True, exist_ok=True)
                 self.download_file(key, local_dest)
-            else:
-                # Directory: key starts with s3_prefix + "/"
-                rel = key[len(s3_prefix):].lstrip("/")
-                if not rel:
-                    continue  # skip S3 "directory" placeholder objects
-                dest_file = local_dest / rel
-                self.download_file(key, dest_file)
+                continue
+
+            # Directory: key starts with s3_prefix + "/"
+            rel = key[len(s3_prefix):].lstrip("/")
+            if not rel:
+                continue  # skip S3 "directory" placeholder objects
+            dest_file = local_dest / rel
+            self.download_file(key, dest_file)
 
         # Write the marker only after all files have been downloaded successfully
         marker.parent.mkdir(parents=True, exist_ok=True)
@@ -421,6 +434,53 @@ class S3DataAccess:
         normalized_key = s3_key.strip("/")
         self._get_s3_client().upload_file(str(local_path), self._bucket, normalized_key)
         return str(local_path), normalized_key
+
+    def upload_result_directory(
+            self,
+            local_dir: Union[str, Path],
+            target_prefix: Optional[str] = None,
+    ) -> Dict[str, List[Tuple[str, str]]]:
+        """Uploads all result files in a local directory to S3.
+
+        Walks *local_dir* recursively and uploads every file to S3 under
+        *target_prefix* (defaults to :attr:`results_prefix`).  Always
+        overwrites existing objects — safe because result filenames carry
+        unique timestamp suffixes.
+
+        :param local_dir: Local directory containing result files.
+        :param target_prefix: S3 key prefix to upload under.  Defaults to
+            ``DIH_S3_RESULTS_PREFIX`` (``data/tab/results``).
+        :return: Dict with ``"uploaded"`` and ``"skipped"`` lists of
+            ``(local_path, s3_key)`` tuples.
+        :raises NotADirectoryError: When *local_dir* does not exist or is not
+            a directory.
+        """
+        local_dir = Path(local_dir)
+        if not local_dir.is_dir():
+            raise NotADirectoryError("Result directory not found: {0}".format(local_dir))
+
+        if target_prefix is None:
+            target_prefix = self._results_prefix
+
+        normalized_prefix = target_prefix.strip("/")
+        summary = {
+            "uploaded": [],
+            "skipped": [],
+        }  # type: Dict[str, List[Tuple[str, str]]]
+
+        for path in sorted(local_dir.rglob("*")):
+            if not path.is_file():
+                continue
+            if _should_skip_file(path):
+                summary["skipped"].append((str(path), ""))
+                continue
+
+            relative_path = path.relative_to(local_dir).as_posix()
+            target_key = "{0}/{1}".format(normalized_prefix, relative_path)
+            self._get_s3_client().upload_file(str(path), self._bucket, target_key)
+            summary["uploaded"].append((str(path), target_key))
+
+        return summary
 
     def upload_directory(
             self,
