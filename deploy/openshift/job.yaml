@@ -1,0 +1,179 @@
+---
+# OpenShift / Kubernetes Job template for running a TAB benchmark.
+#
+# Cluster-specific values (GPU node labels, taints, ServiceAccount) are
+# intentionally left as placeholder comments and must be supplied by the
+# platform team for the target cluster.  All non-secret tunables can be
+# overridden with `kubectl create --edit` or via a Helm values file.
+#
+# Minimal usage example:
+#
+#   kubectl create -f job.yaml \
+#     --save-config \
+#     -n <your-namespace>
+#
+# For parameterised deployments consider wrapping this file with Helm or
+# kustomize and injecting the values listed in values.example.yaml.
+#
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # Unique name per benchmark run; override for each execution.
+  name: tab-benchmark
+  labels:
+    app: tab
+    component: benchmark
+spec:
+  # Retain completed/failed pods for log inspection; adjust as needed.
+  ttlSecondsAfterFinished: 86400
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: tab
+        component: benchmark
+    spec:
+      # ---------------------------------------------------------------
+      # ServiceAccount
+      # Supply a ServiceAccount that holds pull-secrets for the image
+      # registry and (if required) RBAC permissions.
+      # ---------------------------------------------------------------
+      # serviceAccountName: <your-serviceaccount>
+
+      restartPolicy: Never
+
+      # ---------------------------------------------------------------
+      # Node placement — GPU nodes
+      #
+      # The exact label key/value pair depends on your cluster.
+      # Common examples:
+      #   nvidia.com/gpu.present: "true"
+      #   accelerator: nvidia-tesla-a100
+      #
+      # Ask your platform team for the correct label selector.
+      # ---------------------------------------------------------------
+      # nodeSelector:
+      #   <gpu-node-label-key>: "<gpu-node-label-value>"
+
+      # ---------------------------------------------------------------
+      # Tolerations — GPU node taints
+      #
+      # If GPU nodes carry a taint (e.g. nvidia.com/gpu=present:NoSchedule),
+      # add the matching toleration here.
+      #
+      # Example:
+      #   tolerations:
+      #     - key: "nvidia.com/gpu"
+      #       operator: "Exists"
+      #       effect: "NoSchedule"
+      # ---------------------------------------------------------------
+      # tolerations: []
+
+      volumes:
+        - name: result-volume
+          emptyDir: {}
+        - name: cache-volume
+          emptyDir: {}
+
+      containers:
+        - name: tab
+          # Replace with the fully qualified image reference built by your
+          # BuildConfig / CI pipeline.
+          image: "<registry>/<namespace>/tab:<tag>"
+          imagePullPolicy: Always
+
+          # ----------------------------------------------------------
+          # Benchmark command
+          # Override BENCHMARK_SCRIPT to run a different benchmark.
+          # ----------------------------------------------------------
+          command: ["bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              exec bash "${BENCHMARK_SCRIPT}"
+
+          # ----------------------------------------------------------
+          # Resource requests / limits
+          # ----------------------------------------------------------
+          resources:
+            requests:
+              memory: "8Gi"
+              cpu: "2"
+              # Request exactly 1 GPU; set to 0 to run without GPU.
+              nvidia.com/gpu: "1"
+            limits:
+              memory: "32Gi"
+              cpu: "8"
+              nvidia.com/gpu: "1"
+
+          volumeMounts:
+            - name: result-volume
+              mountPath: /tmp/result
+            - name: cache-volume
+              mountPath: /tmp/cache
+
+          env:
+            # --------------------------------------------------------
+            # Benchmark selection
+            # --------------------------------------------------------
+            - name: BENCHMARK_SCRIPT
+              value: "./scripts/multivariate/score/AnomalyTransformer.sh"
+
+            # --------------------------------------------------------
+            # S3 / DIH connection (non-secret values)
+            # Secret values (token, secret key) must be injected via a
+            # Kubernetes Secret; see the secretRef block below.
+            # --------------------------------------------------------
+            - name: TAB_USE_S3
+              value: "true"
+            - name: DIH_S3_REGION
+              value: "eu-central-1"
+            - name: DIH_S3_VERIFY_SSL
+              value: "true"
+            - name: DIH_S3_BUCKET_NAME
+              value: "ka-etu-dih-001-oktoplustim-001"
+            - name: DIH_S3_DATASET_PREFIX
+              value: "data/tab/dataset"
+            - name: DIH_S3_CHECKPOINTS_PREFIX
+              value: "data/tab/checkpoints"
+            - name: DIH_S3_RESULTS_PREFIX
+              value: "data/tab/results"
+            # Secret values injected from a Kubernetes Secret.
+            # Create the secret with:
+            #   kubectl create secret generic tab-s3-credentials \
+            #     --from-literal=DIH_S3_ENDPOINT=https://... \
+            #     --from-literal=DIH_S3_TOKEN=... \
+            #     --from-literal=DIH_S3_SECRET=...
+            - name: DIH_S3_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: tab-s3-credentials
+                  key: DIH_S3_ENDPOINT
+            - name: DIH_S3_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: tab-s3-credentials
+                  key: DIH_S3_TOKEN
+            - name: DIH_S3_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: tab-s3-credentials
+                  key: DIH_S3_SECRET
+
+            # --------------------------------------------------------
+            # Runtime paths (writable inside the container)
+            # --------------------------------------------------------
+            - name: TAB_RESULT_PATH
+              value: "/tmp/result"
+            - name: MPLCONFIGDIR
+              value: "/tmp/matplotlib"
+            - name: HF_HOME
+              value: "/tmp/cache/huggingface"
+            - name: TRANSFORMERS_CACHE
+              value: "/tmp/cache/huggingface/transformers"
+
+            # --------------------------------------------------------
+            # AWS / boto3 tweaks
+            # --------------------------------------------------------
+            - name: AWS_EC2_METADATA_DISABLED
+              value: "true"
