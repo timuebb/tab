@@ -110,7 +110,7 @@ def slow_slope(
     # print(s_slop)
     
     
-    x_mixup[:, 0, :] = x_mix_1[:, 0, :] + s_slop.cuda()
+    x_mixup[:, 0, :] = x_mix_1[:, 0, :] + s_slop.to(x.device)
     
     # print("x_mixup[:, 0, :] in slow_slop is", x_mixup[:, 0, :])
     

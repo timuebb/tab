@@ -268,8 +268,7 @@ class DualTF:
         self.optimizer = torch.optim.Adam(
             self.time_model.parameters(), lr=self.config.lr
         )
-        if torch.cuda.is_available():
-            self.time_model.cuda()
+        self.time_model.to(self.device)
 
         self.time_early_stopping = EarlyStopping(
             patience=3,
@@ -396,8 +395,7 @@ class DualTF:
         self.optimizer = torch.optim.Adam(
             self.fre_model.parameters(), lr=self.config.lr
         )
-        if torch.cuda.is_available():
-            self.fre_model.cuda()
+        self.fre_model.to(self.device)
 
         self.fre_train_loader, val_loader = self.get_fre_dataloader(train_data)
         train_steps = len(self.fre_train_loader)
