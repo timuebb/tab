@@ -26,11 +26,8 @@ class RevIN(nn.Module):
 
     def _init_params(self):
         # initialize RevIN params: (C,)
-        self.affine_weight = torch.ones(self.num_features)
-        self.affine_bias = torch.zeros(self.num_features)
-        self.affine_weight=self.affine_weight.to(device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu'))
-        self.affine_bias=self.affine_bias.to(device=torch.device('cuda:0' if torch.cuda.is_available() else 'cpu'))
-        
+        self.register_buffer('affine_weight', torch.ones(self.num_features))
+        self.register_buffer('affine_bias', torch.zeros(self.num_features))
 
     def _get_statistics(self, x):
         dim2reduce = tuple(range(1, x.ndim-1))
