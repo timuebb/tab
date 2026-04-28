@@ -12,7 +12,7 @@ class MIC(nn.Module):
     """
 
     def __init__(self, feature_size=512, n_heads=8, dropout=0.05, decomp_kernel=[17, 49], conv_kernel=[12, 16],
-                 isometric_kernel=[17, 49], device='cuda'):
+                 isometric_kernel=[17, 49], device='cpu'):
         super(MIC, self).__init__()
         self.conv_kernel = conv_kernel
         self.device = device
@@ -55,7 +55,7 @@ class MIC(nn.Module):
         x = x1
 
         # isometric convolution
-        zeros = torch.zeros((x.shape[0], x.shape[1], x.shape[2] - 1), device=self.device)
+        zeros = torch.zeros((x.shape[0], x.shape[1], x.shape[2] - 1), device=input.device)
         x = torch.cat((zeros, x), dim=-1)
         x = self.drop(self.act(isometric(x)))
         x = self.norm((x + x1).permute(0, 2, 1)).permute(0, 2, 1)
@@ -76,7 +76,7 @@ class MIC(nn.Module):
             multi.append(src_out)
 
             # merge
-        mg = torch.tensor([], device=self.device)
+        mg = torch.tensor([], device=src.device)
         for i in range(len(self.conv_kernel)):
             mg = torch.cat((mg, multi[i].unsqueeze(1)), dim=1)
         mg = self.merge(mg.permute(0, 3, 1, 2)).squeeze(-2).permute(0, 2, 1)
@@ -89,7 +89,7 @@ class MIC(nn.Module):
 
 class SeasonalPrediction(nn.Module):
     def __init__(self, embedding_size=512, n_heads=8, dropout=0.05, d_layers=1, decomp_kernel=[32], c_out=1,
-                 conv_kernel=[2, 4], isometric_kernel=[18, 6], device='cuda'):
+                 conv_kernel=[2, 4], isometric_kernel=[18, 6], device='cpu'):
         super(SeasonalPrediction, self).__init__()
 
         self.mic = nn.ModuleList([MIC(feature_size=embedding_size, n_heads=n_heads,
@@ -140,7 +140,7 @@ class MICN(nn.Module):
                                              dropout=configs.dropout,
                                              d_layers=configs.d_layers, decomp_kernel=decomp_kernel,
                                              c_out=configs.c_out, conv_kernel=conv_kernel,
-                                             isometric_kernel=isometric_kernel, device=torch.device('cuda:0'))
+                                             isometric_kernel=isometric_kernel, device=torch.device('cpu'))
         if self.task_name == 'long_term_forecast' or self.task_name == 'short_term_forecast':
             # refer to DLinear
             self.regression = nn.Linear(configs.seq_len, configs.pred_len)

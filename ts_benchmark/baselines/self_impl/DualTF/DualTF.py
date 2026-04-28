@@ -126,19 +126,19 @@ class DualTF:
                     my_kl_loss(
                         series[u],
                         (
-                            prior[u]
-                            / torch.unsqueeze(
-                                torch.sum(prior[u], dim=-1), dim=-1
-                            ).repeat(1, 1, 1, self.config.seq_len)
+                                prior[u]
+                                / torch.unsqueeze(
+                            torch.sum(prior[u], dim=-1), dim=-1
+                        ).repeat(1, 1, 1, self.config.seq_len)
                         ).detach(),
                     )
                 ) + torch.mean(
                     my_kl_loss(
                         (
-                            prior[u]
-                            / torch.unsqueeze(
-                                torch.sum(prior[u], dim=-1), dim=-1
-                            ).repeat(1, 1, 1, self.config.seq_len)
+                                prior[u]
+                                / torch.unsqueeze(
+                            torch.sum(prior[u], dim=-1), dim=-1
+                        ).repeat(1, 1, 1, self.config.seq_len)
                         ).detach(),
                         series[u],
                     )
@@ -146,10 +146,10 @@ class DualTF:
                 prior_loss += torch.mean(
                     my_kl_loss(
                         (
-                            prior[u]
-                            / torch.unsqueeze(
-                                torch.sum(prior[u], dim=-1), dim=-1
-                            ).repeat(1, 1, 1, self.config.seq_len)
+                                prior[u]
+                                / torch.unsqueeze(
+                            torch.sum(prior[u], dim=-1), dim=-1
+                        ).repeat(1, 1, 1, self.config.seq_len)
                         ),
                         series[u].detach(),
                     )
@@ -157,10 +157,10 @@ class DualTF:
                     my_kl_loss(
                         series[u].detach(),
                         (
-                            prior[u]
-                            / torch.unsqueeze(
-                                torch.sum(prior[u], dim=-1), dim=-1
-                            ).repeat(1, 1, 1, self.config.seq_len)
+                                prior[u]
+                                / torch.unsqueeze(
+                            torch.sum(prior[u], dim=-1), dim=-1
+                        ).repeat(1, 1, 1, self.config.seq_len)
                         ),
                     )
                 )
@@ -188,30 +188,30 @@ class DualTF:
                     my_kl_loss(
                         series[u],
                         (
-                            prior[u]
-                            / torch.unsqueeze(
-                                torch.sum(prior[u], dim=-1), dim=-1
-                            ).repeat(
-                                1,
-                                1,
-                                1,
-                                (self.config.seq_len - self.config.nest_len + 1)
-                                * (self.config.nest_len // 2),
+                                prior[u]
+                                / torch.unsqueeze(
+                            torch.sum(prior[u], dim=-1), dim=-1
+                        ).repeat(
+                            1,
+                            1,
+                            1,
+                            (self.config.seq_len - self.config.nest_len + 1)
+                            * (self.config.nest_len // 2),
                             )
                         ).detach(),
                     )
                 ) + torch.mean(
                     my_kl_loss(
                         (
-                            prior[u]
-                            / torch.unsqueeze(
-                                torch.sum(prior[u], dim=-1), dim=-1
-                            ).repeat(
-                                1,
-                                1,
-                                1,
-                                (self.seq_len - self.config.nest_len + 1)
-                                * (self.config.nest_len // 2),
+                                prior[u]
+                                / torch.unsqueeze(
+                            torch.sum(prior[u], dim=-1), dim=-1
+                        ).repeat(
+                            1,
+                            1,
+                            1,
+                            (self.seq_len - self.config.nest_len + 1)
+                            * (self.config.nest_len // 2),
                             )
                         ).detach(),
                         series[u],
@@ -220,15 +220,15 @@ class DualTF:
                 prior_loss += torch.mean(
                     my_kl_loss(
                         (
-                            prior[u]
-                            / torch.unsqueeze(
-                                torch.sum(prior[u], dim=-1), dim=-1
-                            ).repeat(
-                                1,
-                                1,
-                                1,
-                                (self.config.seq_len - self.config.nest_len + 1)
-                                * (self.config.nest_len // 2),
+                                prior[u]
+                                / torch.unsqueeze(
+                            torch.sum(prior[u], dim=-1), dim=-1
+                        ).repeat(
+                            1,
+                            1,
+                            1,
+                            (self.config.seq_len - self.config.nest_len + 1)
+                            * (self.config.nest_len // 2),
                             )
                         ),
                         series[u].detach(),
@@ -237,15 +237,15 @@ class DualTF:
                     my_kl_loss(
                         series[u].detach(),
                         (
-                            prior[u]
-                            / torch.unsqueeze(
-                                torch.sum(prior[u], dim=-1), dim=-1
-                            ).repeat(
-                                1,
-                                1,
-                                1,
-                                (self.config.seq_len - self.config.nest_len + 1)
-                                * (self.config.nest_len // 2),
+                                prior[u]
+                                / torch.unsqueeze(
+                            torch.sum(prior[u], dim=-1), dim=-1
+                        ).repeat(
+                            1,
+                            1,
+                            1,
+                            (self.config.seq_len - self.config.nest_len + 1)
+                            * (self.config.nest_len // 2),
                             )
                         ),
                     )
@@ -268,8 +268,7 @@ class DualTF:
         self.optimizer = torch.optim.Adam(
             self.time_model.parameters(), lr=self.config.lr
         )
-        if torch.cuda.is_available():
-            self.time_model.cuda()
+        self.time_model.to(self.device)
 
         self.time_early_stopping = EarlyStopping(
             patience=3,
@@ -301,19 +300,19 @@ class DualTF:
                         my_kl_loss(
                             series[u],
                             (
-                                prior[u]
-                                / torch.unsqueeze(
-                                    torch.sum(prior[u], dim=-1), dim=-1
-                                ).repeat(1, 1, 1, self.config.seq_len)
+                                    prior[u]
+                                    / torch.unsqueeze(
+                                torch.sum(prior[u], dim=-1), dim=-1
+                            ).repeat(1, 1, 1, self.config.seq_len)
                             ).detach(),
                         )
                     ) + torch.mean(
                         my_kl_loss(
                             (
-                                prior[u]
-                                / torch.unsqueeze(
-                                    torch.sum(prior[u], dim=-1), dim=-1
-                                ).repeat(1, 1, 1, self.config.seq_len)
+                                    prior[u]
+                                    / torch.unsqueeze(
+                                torch.sum(prior[u], dim=-1), dim=-1
+                            ).repeat(1, 1, 1, self.config.seq_len)
                             ).detach(),
                             series[u],
                         )
@@ -321,10 +320,10 @@ class DualTF:
                     prior_loss += torch.mean(
                         my_kl_loss(
                             (
-                                prior[u]
-                                / torch.unsqueeze(
-                                    torch.sum(prior[u], dim=-1), dim=-1
-                                ).repeat(1, 1, 1, self.config.seq_len)
+                                    prior[u]
+                                    / torch.unsqueeze(
+                                torch.sum(prior[u], dim=-1), dim=-1
+                            ).repeat(1, 1, 1, self.config.seq_len)
                             ),
                             series[u].detach(),
                         )
@@ -332,10 +331,10 @@ class DualTF:
                         my_kl_loss(
                             series[u].detach(),
                             (
-                                prior[u]
-                                / torch.unsqueeze(
-                                    torch.sum(prior[u], dim=-1), dim=-1
-                                ).repeat(1, 1, 1, self.config.seq_len)
+                                    prior[u]
+                                    / torch.unsqueeze(
+                                torch.sum(prior[u], dim=-1), dim=-1
+                            ).repeat(1, 1, 1, self.config.seq_len)
                             ),
                         )
                     )
@@ -350,7 +349,7 @@ class DualTF:
                 if (i + 1) % 500 == 0:
                     speed = (time.time() - time_now) / iter_count
                     left_time = speed * (
-                        (self.config.num_epochs - epoch) * train_steps - i
+                            (self.config.num_epochs - epoch) * train_steps - i
                     )
                     print(
                         "\tspeed: {:.4f}s/iter; left time: {:.4f}s".format(
@@ -387,7 +386,7 @@ class DualTF:
     def _fre_detect_fit(self, train_data: pd.DataFrame):
         self.fre_model = FrequencyTransformer(
             win_size=(self.seq_len - self.config.nest_len + 1)
-            * (self.config.nest_len // 2),
+                     * (self.config.nest_len // 2),
             enc_in=self.config.c_in,
             c_out=self.config.c_out,
             e_layers=3,
@@ -396,8 +395,7 @@ class DualTF:
         self.optimizer = torch.optim.Adam(
             self.fre_model.parameters(), lr=self.config.lr
         )
-        if torch.cuda.is_available():
-            self.fre_model.cuda()
+        self.fre_model.to(self.device)
 
         self.fre_train_loader, val_loader = self.get_fre_dataloader(train_data)
         train_steps = len(self.fre_train_loader)
@@ -425,30 +423,30 @@ class DualTF:
                         my_kl_loss(
                             series[u],
                             (
-                                prior[u]
-                                / torch.unsqueeze(
-                                    torch.sum(prior[u], dim=-1), dim=-1
-                                ).repeat(
-                                    1,
-                                    1,
-                                    1,
-                                    (self.config.seq_len - self.config.nest_len + 1)
-                                    * (self.config.nest_len // 2),
+                                    prior[u]
+                                    / torch.unsqueeze(
+                                torch.sum(prior[u], dim=-1), dim=-1
+                            ).repeat(
+                                1,
+                                1,
+                                1,
+                                (self.config.seq_len - self.config.nest_len + 1)
+                                * (self.config.nest_len // 2),
                                 )
                             ).detach(),
                         )
                     ) + torch.mean(
                         my_kl_loss(
                             (
-                                prior[u]
-                                / torch.unsqueeze(
-                                    torch.sum(prior[u], dim=-1), dim=-1
-                                ).repeat(
-                                    1,
-                                    1,
-                                    1,
-                                    (self.config.seq_len - self.config.nest_len + 1)
-                                    * (self.config.nest_len // 2),
+                                    prior[u]
+                                    / torch.unsqueeze(
+                                torch.sum(prior[u], dim=-1), dim=-1
+                            ).repeat(
+                                1,
+                                1,
+                                1,
+                                (self.config.seq_len - self.config.nest_len + 1)
+                                * (self.config.nest_len // 2),
                                 )
                             ).detach(),
                             series[u],
@@ -457,15 +455,15 @@ class DualTF:
                     prior_loss += torch.mean(
                         my_kl_loss(
                             (
-                                prior[u]
-                                / torch.unsqueeze(
-                                    torch.sum(prior[u], dim=-1), dim=-1
-                                ).repeat(
-                                    1,
-                                    1,
-                                    1,
-                                    (self.config.seq_len - self.config.nest_len + 1)
-                                    * (self.config.nest_len // 2),
+                                    prior[u]
+                                    / torch.unsqueeze(
+                                torch.sum(prior[u], dim=-1), dim=-1
+                            ).repeat(
+                                1,
+                                1,
+                                1,
+                                (self.config.seq_len - self.config.nest_len + 1)
+                                * (self.config.nest_len // 2),
                                 )
                             ),
                             series[u].detach(),
@@ -474,15 +472,15 @@ class DualTF:
                         my_kl_loss(
                             series[u].detach(),
                             (
-                                prior[u]
-                                / torch.unsqueeze(
-                                    torch.sum(prior[u], dim=-1), dim=-1
-                                ).repeat(
-                                    1,
-                                    1,
-                                    1,
-                                    (self.config.seq_len - self.config.nest_len + 1)
-                                    * (self.config.nest_len // 2),
+                                    prior[u]
+                                    / torch.unsqueeze(
+                                torch.sum(prior[u], dim=-1), dim=-1
+                            ).repeat(
+                                1,
+                                1,
+                                1,
+                                (self.config.seq_len - self.config.nest_len + 1)
+                                * (self.config.nest_len // 2),
                                 )
                             ),
                         )
@@ -499,7 +497,7 @@ class DualTF:
                 if (i + 1) % 500 == 0:
                     speed = (time.time() - time_now) / iter_count
                     left_time = speed * (
-                        (self.config.num_epochs - epoch) * train_steps - i
+                            (self.config.num_epochs - epoch) * train_steps - i
                     )
                     print(
                         "\tspeed: {:.4f}s/iter; left time: {:.4f}s".format(
@@ -566,53 +564,53 @@ class DualTF:
             for u in range(len(prior)):
                 if u == 0:
                     series_loss = (
-                        my_kl_loss(
-                            series[u],
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                series[u],
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(1, 1, 1, self.seq_len)
-                            ).detach(),
-                        )
-                        * temperature
+                                ).detach(),
+                            )
+                            * temperature
                     )
                     prior_loss = (
-                        my_kl_loss(
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(1, 1, 1, self.seq_len)
-                            ),
-                            series[u].detach(),
-                        )
-                        * temperature
+                                ),
+                                series[u].detach(),
+                            )
+                            * temperature
                     )
                 else:
                     series_loss += (
-                        my_kl_loss(
-                            series[u],
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                series[u],
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(1, 1, 1, self.seq_len)
-                            ).detach(),
-                        )
-                        * temperature
+                                ).detach(),
+                            )
+                            * temperature
                     )
                     prior_loss += (
-                        my_kl_loss(
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(1, 1, 1, self.seq_len)
-                            ),
-                            series[u].detach(),
-                        )
-                        * temperature
+                                ),
+                                series[u].detach(),
+                            )
+                            * temperature
                     )
             metric = torch.softmax((-series_loss - prior_loss), dim=-1)
             cri = metric * loss
@@ -688,11 +686,11 @@ class DualTF:
             for u in range(len(prior)):
                 if u == 0:
                     series_loss = (
-                        my_kl_loss(
-                            series[u],
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                series[u],
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(
                                     1,
@@ -700,16 +698,16 @@ class DualTF:
                                     1,
                                     (self.config.seq_len - self.config.nest_len + 1)
                                     * (self.config.nest_len // 2),
-                                )
-                            ).detach(),
-                        )
-                        * temperature
+                                    )
+                                ).detach(),
+                            )
+                            * temperature
                     )
                     prior_loss = (
-                        my_kl_loss(
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(
                                     1,
@@ -717,19 +715,19 @@ class DualTF:
                                     1,
                                     (self.config.seq_len - self.config.nest_len + 1)
                                     * (self.config.nest_len // 2),
-                                )
-                            ),
-                            series[u].detach(),
-                        )
-                        * temperature
+                                    )
+                                ),
+                                series[u].detach(),
+                            )
+                            * temperature
                     )
                 else:
                     series_loss += (
-                        my_kl_loss(
-                            series[u],
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                series[u],
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(
                                     1,
@@ -737,16 +735,16 @@ class DualTF:
                                     1,
                                     (self.config.seq_len - self.config.nest_len + 1)
                                     * (self.config.nest_len // 2),
-                                )
-                            ).detach(),
-                        )
-                        * temperature
+                                    )
+                                ).detach(),
+                            )
+                            * temperature
                     )
                     prior_loss += (
-                        my_kl_loss(
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(
                                     1,
@@ -754,11 +752,11 @@ class DualTF:
                                     1,
                                     (self.config.seq_len - self.config.nest_len + 1)
                                     * (self.config.nest_len // 2),
-                                )
-                            ),
-                            series[u].detach(),
-                        )
-                        * temperature
+                                    )
+                                ),
+                                series[u].detach(),
+                            )
+                            * temperature
                     )
 
             metric = torch.softmax((-series_loss - prior_loss), dim=-1)
@@ -782,11 +780,11 @@ class DualTF:
             for u in range(len(prior)):
                 if u == 0:
                     series_loss = (
-                        my_kl_loss(
-                            series[u],
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                series[u],
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(
                                     1,
@@ -794,16 +792,16 @@ class DualTF:
                                     1,
                                     (self.config.seq_len - self.config.nest_len + 1)
                                     * (self.config.nest_len // 2),
-                                )
-                            ).detach(),
-                        )
-                        * temperature
+                                    )
+                                ).detach(),
+                            )
+                            * temperature
                     )
                     prior_loss = (
-                        my_kl_loss(
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(
                                     1,
@@ -811,19 +809,19 @@ class DualTF:
                                     1,
                                     (self.config.seq_len - self.config.nest_len + 1)
                                     * (self.config.nest_len // 2),
-                                )
-                            ),
-                            series[u].detach(),
-                        )
-                        * temperature
+                                    )
+                                ),
+                                series[u].detach(),
+                            )
+                            * temperature
                     )
                 else:
                     series_loss += (
-                        my_kl_loss(
-                            series[u],
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                series[u],
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(
                                     1,
@@ -831,16 +829,16 @@ class DualTF:
                                     1,
                                     (self.config.seq_len - self.config.nest_len + 1)
                                     * (self.config.nest_len // 2),
-                                )
-                            ).detach(),
-                        )
-                        * temperature
+                                    )
+                                ).detach(),
+                            )
+                            * temperature
                     )
                     prior_loss += (
-                        my_kl_loss(
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(
                                     1,
@@ -848,11 +846,11 @@ class DualTF:
                                     1,
                                     (self.config.seq_len - self.config.nest_len + 1)
                                     * (self.config.nest_len // 2),
-                                )
-                            ),
-                            series[u].detach(),
-                        )
-                        * temperature
+                                    )
+                                ),
+                                series[u].detach(),
+                            )
+                            * temperature
                     )
             # Metric
             metric = torch.softmax((-series_loss - prior_loss), dim=-1)
@@ -884,11 +882,11 @@ class DualTF:
             for u in range(len(prior)):
                 if u == 0:
                     series_loss = (
-                        my_kl_loss(
-                            series[u],
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                series[u],
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(
                                     1,
@@ -896,16 +894,16 @@ class DualTF:
                                     1,
                                     (self.config.seq_len - self.config.nest_len + 1)
                                     * (self.config.nest_len // 2),
-                                )
-                            ).detach(),
-                        )
-                        * temperature
+                                    )
+                                ).detach(),
+                            )
+                            * temperature
                     )
                     prior_loss = (
-                        my_kl_loss(
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(
                                     1,
@@ -913,19 +911,19 @@ class DualTF:
                                     1,
                                     (self.config.seq_len - self.config.nest_len + 1)
                                     * (self.config.nest_len // 2),
-                                )
-                            ),
-                            series[u].detach(),
-                        )
-                        * temperature
+                                    )
+                                ),
+                                series[u].detach(),
+                            )
+                            * temperature
                     )
                 else:
                     series_loss += (
-                        my_kl_loss(
-                            series[u],
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                series[u],
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(
                                     1,
@@ -933,16 +931,16 @@ class DualTF:
                                     1,
                                     (self.config.seq_len - self.config.nest_len + 1)
                                     * (self.config.nest_len // 2),
-                                )
-                            ).detach(),
-                        )
-                        * temperature
+                                    )
+                                ).detach(),
+                            )
+                            * temperature
                     )
                     prior_loss += (
-                        my_kl_loss(
-                            (
-                                prior[u]
-                                / torch.unsqueeze(
+                            my_kl_loss(
+                                (
+                                        prior[u]
+                                        / torch.unsqueeze(
                                     torch.sum(prior[u], dim=-1), dim=-1
                                 ).repeat(
                                     1,
@@ -950,11 +948,11 @@ class DualTF:
                                     1,
                                     (self.config.seq_len - self.config.nest_len + 1)
                                     * (self.config.nest_len // 2),
-                                )
-                            ),
-                            series[u].detach(),
-                        )
-                        * temperature
+                                    )
+                                ),
+                                series[u].detach(),
+                            )
+                            * temperature
                     )
             metric = torch.softmax((-series_loss - prior_loss), dim=-1)
 
@@ -975,7 +973,7 @@ class DualTF:
             test_energy.shape[0],
             self.config.seq_len - self.config.nest_len + 1,
             self.config.nest_len // 2,
-        )
+            )
         ###################################### Alignment ##############################################
 
         for outer in range(len(nested_test_energy)):
@@ -995,8 +993,8 @@ class DualTF:
                 if ts < self.config.nest_len - 1:
                     num_context = ts + 1
                 elif (
-                    ts >= self.config.nest_len - 1
-                    and ts < self.config.seq_len - self.config.nest_len + 1
+                        ts >= self.config.nest_len - 1
+                        and ts < self.config.seq_len - self.config.nest_len + 1
                 ):
                     num_context = self.config.nest_len
                 elif ts >= self.config.seq_len - self.config.nest_len + 1:
@@ -1010,7 +1008,7 @@ class DualTF:
                 rec_error_array[t : t + self.config.nest_len] += as_frequency[t]
 
             sub_evaluation_array[1] = (
-                rec_error_array / sub_evaluation_array[0]
+                    rec_error_array / sub_evaluation_array[0]
             )  # exponential average (reconstruction error)
 
             # Predicted Anomaly Percentage
@@ -1045,8 +1043,8 @@ class DualTF:
             if timestamp < self.config.seq_len - 1:
                 grand_context = timestamp + 1
             elif (
-                timestamp >= self.config.seq_len - 1
-                and timestamp < len(test_seq) - self.config.seq_len + 1
+                    timestamp >= self.config.seq_len - 1
+                    and timestamp < len(test_seq) - self.config.seq_len + 1
             ):
                 grand_context = self.config.seq_len
             elif timestamp >= len(test_seq) - self.config.seq_len + 1:

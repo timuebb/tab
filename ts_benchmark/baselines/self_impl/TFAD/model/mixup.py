@@ -17,9 +17,9 @@ import torch
 
 
 def mixup_batch(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    mixup_rate: float,
+        x: torch.Tensor,
+        y: torch.Tensor,
+        mixup_rate: float,
 ) -> torch.Tensor:
     """
     Args:
@@ -53,7 +53,7 @@ def mixup_batch(
     x_mix_1 = x[idx_1].clone()
     x_mix_2 = x[idx_2].clone()
     x_mixup = (
-        x_mix_1 * weights[:, None, None] + x_mix_2 * oppose_weights[:, None, None]
+            x_mix_1 * weights[:, None, None] + x_mix_2 * oppose_weights[:, None, None]
     )  # .detach()
 
     # Label as positive anomalies
@@ -63,9 +63,9 @@ def mixup_batch(
 
 
 def slow_slope(
-    x: torch.Tensor,
-    y: torch.Tensor,
-    mixup_rate: float,
+        x: torch.Tensor,
+        y: torch.Tensor,
+        mixup_rate: float,
 ) -> torch.Tensor:
     # print("x shape is", x.shape)
     # print("y shape is", y.shape)
@@ -82,7 +82,7 @@ def slow_slope(
         raise ValueError(f"mixup_rate must be > 0.")
     batch_size = x.shape[0]
     mixup_size = int(batch_size * mixup_rate)  #
-    
+
 
     # Select indices
     idx_1 = torch.arange(mixup_size)
@@ -91,29 +91,29 @@ def slow_slope(
     # 构造一个单调增函数
     slop = torch.arange(x_mix_1[:, 0, :].shape[0])
     # print(slop.shape)
-    
+
 
     # Create contamination
     # corrected x_mix_2: idx_2
     x_mixup = x[idx_1].clone()
-    
-#     print("x_mixup[:, 0, :] shape is", x_mixup[:][0][:].shape)
-    
-#     print("x_mixup[:, 0, :] is", x_mixup[:, 0, :])
+
+    #     print("x_mixup[:, 0, :] shape is", x_mixup[:][0][:].shape)
+
+    #     print("x_mixup[:, 0, :] is", x_mixup[:, 0, :])
     oe_size = int(x_mixup[:, 0, :].shape[1])
     # idx_2 = torch.arange(oe_size)
-    
+
     s_r = torch.ones(slop.shape)
     s_c = (0.00001*torch.arange(oe_size))
     s_slop = torch.unsqueeze(s_r, dim=1)*torch.unsqueeze(s_c, dim=0)
     # print(s_slop.shape)
     # print(s_slop)
-    
-    
-    x_mixup[:, 0, :] = x_mix_1[:, 0, :] + s_slop.cuda()
-    
+
+
+    x_mixup[:, 0, :] = x_mix_1[:, 0, :] + s_slop.to(x.device)
+
     # print("x_mixup[:, 0, :] in slow_slop is", x_mixup[:, 0, :])
-    
+
     # Label as positive anomalies
     y_oe= torch.ones(mixup_size).type_as(y)
 
@@ -134,15 +134,15 @@ def slow_slope(
 #         y : Tensor of shape (batch, )
 #         mixup_rate : Number of generated anomalies as proportion of the batch size.
 #     """
-    
+
 #     if mixup_rate == 0:
 #         raise ValueError(f"mixup_rate must be > 0.")
 #     batch_size = x.shape[0]
-#     mixup_size = int(batch_size * rate_rn) 
+#     mixup_size = int(batch_size * rate_rn)
 
 #     # Select indices
 #     idx_1 = torch.arange(mixup_size)
-    
+
 #     batch_data = x[idx_1][y==0].clone().numpy()
 
 #     ## set no trend to extract
@@ -170,9 +170,9 @@ def slow_slope(
 #     adjusted_trend = decomposed_out_part[:,0].reshape(-1,1)
 #     adjusted_season = decomposed_out_part[:,1].reshape(-1,1)
 #     irregular_data = decomposed_out_part[:,2].reshape(-1,1)
-    
+
 #     # x_rn = torch.from_numpy(adjusted_trend+adjusted_season)
 #     x_rn = torch.from_numpy(adjusted_trend+adjusted_season+0.1*irregular_data)
 #     y_rn = torch.zeros(y[idx_1][y==0].shape)
-    
+
 #     return x_rn, y_rn

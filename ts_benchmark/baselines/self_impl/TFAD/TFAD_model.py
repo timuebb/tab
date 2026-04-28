@@ -28,9 +28,9 @@ class hp_filter(nn.Module):
         N = x.shape[1]
         D1 = D_matrix(N)
         D2 = D_matrix(N - 1)
-        D = torch.mm(D2, D1).to(device='cuda')
+        D = torch.mm(D2, D1).to(device=x.device)
 
-        g = torch.matmul(torch.inverse(torch.eye(N).to(device='cuda') + self.lamb * torch.mm(D.T, D)), x)
+        g = torch.matmul(torch.inverse(torch.eye(N).to(device=x.device) + self.lamb * torch.mm(D.T, D)), x)
         res = x - g
         g = g.permute(0, 2, 1)
         res = res.permute(0, 2, 1)

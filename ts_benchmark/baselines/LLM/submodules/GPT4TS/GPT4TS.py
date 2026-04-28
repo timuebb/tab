@@ -15,7 +15,7 @@ from ts_benchmark.utils.s3_utils import get_checkpoint_path
 
 
 class Model(nn.Module):
-    
+
     def __init__(self, configs):
         super(Model, self).__init__()
         # self.is_ln = configs.ln
@@ -28,14 +28,14 @@ class Model(nn.Module):
         self.d_ff = configs.d_ff
         self.patch_num = (configs.seq_len + self.pred_len - self.patch_size) // self.stride + 1
 
-        self.padding_patch_layer = nn.ReplicationPad1d((0, self.stride)) 
+        self.padding_patch_layer = nn.ReplicationPad1d((0, self.stride))
         self.patch_num += 1
         # self.enc_embedding = DataEmbedding(configs.enc_in * self.patch_size, configs.d_model, configs.embed, configs.freq,
         #                                    configs.dropout)
 
         self.gpt2 = GPT2Model.from_pretrained(get_checkpoint_path('ts_benchmark/baselines/LLM/checkpoints/gpt2'), output_attentions=True, output_hidden_states=True)
         self.gpt2.h = self.gpt2.h[:configs.gpt_layers]
-        
+
         for i, (name, param) in enumerate(self.gpt2.named_parameters()):
             if 'ln' in name or 'wpe' in name: # or 'mlp' in name:
                 param.requires_grad = True
@@ -57,14 +57,14 @@ class Model(nn.Module):
         if self.task_name == 'imputation':
             self.ln_proj = nn.LayerNorm(configs.d_model)
             self.out_layer = nn.Linear(
-                configs.d_model, 
-                configs.c_out, 
+                configs.d_model,
+                configs.c_out,
                 bias=True)
         if self.task_name == 'anomaly_detection':
             self.ln_proj = nn.LayerNorm(configs.d_ff)
             self.out_layer = nn.Linear(
-                configs.d_ff, 
-                configs.c_out, 
+                configs.d_ff,
+                configs.c_out,
                 bias=True)
         if self.task_name == 'classification':
             self.act = F.gelu
@@ -90,7 +90,7 @@ class Model(nn.Module):
 
     def anomaly_detection(self, x_enc):
         B, L, M = x_enc.shape
-        
+
         # Normalization from Non-stationary Transformer
 
         seg_num = 25
@@ -110,9 +110,9 @@ class Model(nn.Module):
 
         # enc_out = self.enc_embedding(x_enc, None)  # [B,T,C]
         enc_out = torch.nn.functional.pad(x_enc, (0, 768-x_enc.shape[-1]))
-        
+
         outputs = self.gpt2(inputs_embeds=enc_out).last_hidden_state
-        
+
         outputs = outputs[:, :, :self.d_ff]
         # outputs = self.ln_proj(outputs)
         dec_out = self.out_layer(outputs)

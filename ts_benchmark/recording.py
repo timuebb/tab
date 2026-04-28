@@ -50,9 +50,9 @@ def read_record_file(fn: str) -> pd.DataFrame:
 
 
 def write_record_file(
-    result_df: pd.DataFrame,
-    file_path: str,
-    compress_method: Optional[str] = None,
+        result_df: pd.DataFrame,
+        file_path: str,
+        compress_method: Optional[str] = None,
 ) -> str:
     """
     Write to a single record file.
@@ -80,7 +80,7 @@ def write_record_file(
 
 
 def load_record_data(
-    record_files: List[str], drop_columns: Optional[List[str]] = None
+        record_files: List[str], drop_columns: Optional[List[str]] = None
 ) -> pd.DataFrame:
     """
     Loads benchmarking records from multiple record files.
@@ -129,8 +129,25 @@ def find_record_files(directory: str) -> List[str]:
     return record_files
 
 
+def _get_default_result_root() -> str:
+    """Return the base directory for benchmark result files.
+
+    Resolution order (first non-empty value wins):
+
+    1. ``TAB_RESULT_PATH`` environment variable – lets operators redirect
+       output to any writable path (e.g. ``/tmp/result`` in a read-only
+       container).
+    2. ``<repo-root>/result`` – the classic default that works when the
+       working directory is writable.
+    """
+    env_path = os.environ.get("TAB_RESULT_PATH", "").strip()
+    if env_path:
+        return env_path
+    return os.path.join(ROOT_PATH, "result")
+
+
 def save_log(
-    result_df: pd.DataFrame, save_path, file_prefix: str, compress_method: str = "gz"
+        result_df: pd.DataFrame, save_path, file_prefix: str, compress_method: str = "gz"
 ) -> str:
     """
     Save log data.
@@ -154,12 +171,12 @@ def save_log(
 
     if save_path is not None:
         result_path = (
-            os.path.join(ROOT_PATH, "result", save_path)
+            os.path.join(_get_default_result_root(), save_path)
             if not os.path.isabs(save_path)
             else save_path
         )
     else:
-        result_path = os.path.join(ROOT_PATH, "result")
+        result_path = _get_default_result_root()
     os.makedirs(result_path, exist_ok=True)
 
     record_filename = file_prefix + get_unique_file_suffix()

@@ -12,9 +12,9 @@ from ts_benchmark.utils.s3_utils import get_checkpoint_path
 class Moment(nn.Module):
 
     def __init__(
-        self,
-        config,
-        **kwargs,
+            self,
+            config,
+            **kwargs,
     ):
         super().__init__()
         self.context_length = config.seq_len
@@ -29,10 +29,10 @@ class Moment(nn.Module):
             model_kwargs={"task_name": "reconstruction"},
         )
         self.model.init()
-        
+
 
     def forward(self, inputs):
-        
+
         B, L, K = inputs.shape
         inputs = rearrange(inputs, 'b l k -> b k l')
         # # 计算需要的填充大小

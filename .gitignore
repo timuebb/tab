@@ -5,3 +5,12 @@ result/
 .git
 *.DS_Store
 venv/
+/ts_benchmark/baselines/pre_train/checkpoints/
+/ts_benchmark/baselines/LLM/checkpoints/
+scripts/dih_connect/.env
+docker/*
+docker
+*.crt
+__pycache__/
+*.pyc
+*.pyo

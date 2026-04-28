@@ -10,11 +10,11 @@ from ts_benchmark.utils.s3_utils import get_checkpoint_path
 
 
 class TimerModel(nn.Module):
-# class Timer(nn.Module):
+    # class Timer(nn.Module):
     def __init__(
-        self,
-        config,
-        **kwargs
+            self,
+            config,
+            **kwargs
     ):
         super().__init__()
         self.context_length = config.seq_len
@@ -46,10 +46,10 @@ class TimerModel(nn.Module):
         if not config.use_p:
             for param in self.timer.parameters():
                 param.data.uniform_(-0.02, 0.02)
-       
-     
+
+
     def forward(self, inputs):
-            
+
         B, L, K = inputs.shape
 
         inputs = rearrange(inputs, 'b l k -> b k l')
@@ -58,5 +58,5 @@ class TimerModel(nn.Module):
 
         outputs = self.model.anomaly_detection(inputs)
         pred_y = rearrange(outputs, '(b k) l 1 -> b l k', b=B, k=K)
-            
+
         return pred_y[:, :self.context_length, :]
