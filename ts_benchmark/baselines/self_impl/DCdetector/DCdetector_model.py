@@ -1,3 +1,5 @@
+import itertools
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -5,8 +7,6 @@ from einops import rearrange
 from .attn import DAC_structure, AttentionLayer
 from .embed import DataEmbedding, TokenEmbedding
 from .RevIN import RevIN
-# from tkinter import _flatten
-from _tkinter import _flatten
 
 
 class Encoder(nn.Module):
@@ -79,8 +79,8 @@ class DCdetector_model(nn.Module):
             series, prior = self.encoder(x_patch_size, x_patch_num, x_ori, patch_index)
             series_patch_mean.append(series), prior_patch_mean.append(prior)
 
-        series_patch_mean = list(_flatten(series_patch_mean))
-        prior_patch_mean = list(_flatten(prior_patch_mean))
+        series_patch_mean = list(itertools.chain.from_iterable(series_patch_mean))
+        prior_patch_mean = list(itertools.chain.from_iterable(prior_patch_mean))
             
         if self.output_attention:
             return series_patch_mean, prior_patch_mean
