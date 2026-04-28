@@ -579,8 +579,8 @@ class Model(nn.Module):
                     1, configs_list[i][1]['enc_in'], configs_list[i][1]['num_class'], args.d_model)
                 torch.nn.init.normal_(
                     self.category_tokens[task_data_name], std=.02)
-                
-                
+
+
         self.cls_nums = {}
         for i in range(self.num_task):
             task_data_name = configs_list[i][0]
@@ -595,12 +595,12 @@ class Model(nn.Module):
                 input_token_len = calculate_unfold_output_length(
                     configs_list[i][1]['seq_len']+padding, args.stride, args.patch_len)
                 input_pad = args.stride * \
-                    (input_token_len - 1) + args.patch_len - \
-                    configs_list[i][1]['seq_len']
+                            (input_token_len - 1) + args.patch_len - \
+                            configs_list[i][1]['seq_len']
                 pred_token_len = calculate_unfold_output_length(
                     configs_list[i][1]['pred_len']-input_pad, args.stride, args.patch_len)
                 real_len = configs_list[i][1]['seq_len'] + \
-                    configs_list[i][1]['pred_len']
+                           configs_list[i][1]['pred_len']
                 self.cls_nums[task_data_name] = [pred_token_len,
                                                  configs_list[i][1]['pred_len'], real_len]
 
@@ -673,7 +673,7 @@ class Model(nn.Module):
             this_function_prompt = init_mask_prompt[:, :, -task_prompt_num:]
             x = torch.cat((this_prompt, x, this_function_prompt), dim=2)
             x[:, :, self.prompt_num:] = x[:, :, self.prompt_num:] + \
-                self.position_embedding(x[:, :, self.prompt_num:])
+                                        self.position_embedding(x[:, :, self.prompt_num:])
         elif task_name == 'classification':
             this_function_prompt = task_prompt.repeat(x.shape[0], 1, 1, 1)
             x = x + self.position_embedding(x)
@@ -714,17 +714,17 @@ class Model(nn.Module):
         attn_mask = None
         for block in self.blocks:
             x = block(x, prefix_seq_len=prefix_len +
-                      seq_len, attn_mask=attn_mask)
+                                        seq_len, attn_mask=attn_mask)
         return x
 
     def forecast(self, x, x_mark, task_id):
         x, means, stdev, n_vars, _ = self.tokenize(x)
-        
+
         task_data_name = self.configs_list[task_id][0]
         task_prompt_num = self.cls_nums[task_data_name][0]
         task_seq_num = self.cls_nums[task_data_name][1]
         real_seq_len = self.cls_nums[task_data_name][2]
-        
+
         prefix_prompt = self.prompt_token.repeat(1,n_vars,1,1)
         task_prompt = self.mask_token.repeat(1,n_vars,1,1)
 
@@ -818,7 +818,7 @@ class Model(nn.Module):
 
         # Calculate mask ratios and lengths to keep for each sample in the batch
         mask_ratios = torch.rand(N, device=x.device) * \
-            (max_mask_ratio - min_mask_ratio) + min_mask_ratio
+                      (max_mask_ratio - min_mask_ratio) + min_mask_ratio
         len_keeps = (L * (1 - mask_ratios)).long()
 
         noise = torch.rand(N, L, device=x.device)  # noise in [0, 1]
@@ -846,7 +846,7 @@ class Model(nn.Module):
 
         # Randomly choose a mask ratio for each sample within the specified range
         mask_ratios = torch.rand(N, device=x.device) * \
-            (max_mask_ratio - min_mask_ratio) + min_mask_ratio
+                      (max_mask_ratio - min_mask_ratio) + min_mask_ratio
         len_keeps = (L * (1 - mask_ratios)).long()
 
         # Binary mask creation without a for loop
@@ -919,11 +919,11 @@ class Model(nn.Module):
             mask_dec_out = mask_dec_out[:, :seq_len]
             # De-Normalization from Non-stationary Transformer
             mask_dec_out = mask_dec_out * \
-                (stdev[:, 0, :].unsqueeze(1).repeat(
-                    1, mask_dec_out.shape[1], 1))
+                           (stdev[:, 0, :].unsqueeze(1).repeat(
+                               1, mask_dec_out.shape[1], 1))
             mask_dec_out = mask_dec_out + \
-                (means[:, 0, :].unsqueeze(1).repeat(
-                    1, mask_dec_out.shape[1], 1))
+                           (means[:, 0, :].unsqueeze(1).repeat(
+                               1, mask_dec_out.shape[1], 1))
             cls_dec_out = self.cls_head(x, return_feature=True)
             # detach grad of the forecasting on tokens
             fused_dec_out = torch.cat(
@@ -932,11 +932,11 @@ class Model(nn.Module):
                 fused_dec_out, seq_len+padding, seq_token_len)
             cls_dec_out = cls_dec_out[:, :seq_len]
             cls_dec_out = cls_dec_out * \
-                (stdev[:, 0, :].unsqueeze(1).repeat(
-                    1, cls_dec_out.shape[1], 1))
+                          (stdev[:, 0, :].unsqueeze(1).repeat(
+                              1, cls_dec_out.shape[1], 1))
             cls_dec_out = cls_dec_out + \
-                (means[:, 0, :].unsqueeze(1).repeat(
-                    1, cls_dec_out.shape[1], 1))
+                          (means[:, 0, :].unsqueeze(1).repeat(
+                              1, cls_dec_out.shape[1], 1))
 
             return cls_dec_out, mask_dec_out, mask_seq
         else:
@@ -953,9 +953,9 @@ class Model(nn.Module):
 
 class UniTS(nn.Module):
     def __init__(
-        self,
-        config,
-        **kwargs
+            self,
+            config,
+            **kwargs
     ):
         super().__init__()
         self.context_length = config.seq_len
@@ -963,12 +963,12 @@ class UniTS(nn.Module):
         self.target_dim = config.target_dim
         self.freq = config.freq
         self.dataset = config.dataset
-        
+
         # self.no_training = True
 
         args, configs_list = self.generate_units_default_args(self.dataset)
         self.model = Model(args, configs_list, pretrain=False)
-        
+
         pretrain_weight_path = get_checkpoint_path("ts_benchmark/baselines/pre_train/checkpoints/units/units_x32_pretrain_checkpoint.pth")
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -978,12 +978,12 @@ class UniTS(nn.Module):
             if not ('cls_prompts' in k):
                 k = k.replace('module.', '') if 'module.' in k else k
                 ckpt[k] = v
-        
+
         msg = self.model.load_state_dict(ckpt, strict=False)
         if len(msg.missing_keys) > 0:
             print(f"""Warning: There are missing keys in the pretrained model: {msg.missing_keys}, 
                 which may cause prediction results less accurate.""")
-            
+
         if not config.use_p:
             for param in self.model.parameters():
                 param.data.uniform_(-0.02, 0.02)
@@ -1042,6 +1042,6 @@ class UniTS(nn.Module):
         return args, task_data_config_list
 
 
-    def forward(self, inputs): 
-        point_forecast = self.model.anomaly_detection(inputs, 0) 
+    def forward(self, inputs):
+        point_forecast = self.model.anomaly_detection(inputs, 0)
         return point_forecast

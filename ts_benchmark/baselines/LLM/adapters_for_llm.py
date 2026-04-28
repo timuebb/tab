@@ -93,7 +93,7 @@ DEFAULT_LLM_BASED_HYPER_PARAMS = {
     "lm_ft_type": "fpt",
     "instruct_path": "dataset/instruct.json",
     "lm_layer_num": 6,
-    "dec_trans_layer_num": 2, 
+    "dec_trans_layer_num": 2,
     "ts_embed_dropout": 0.3,
     "dec_head_dropout": 0.1,
 
@@ -211,7 +211,7 @@ class LLMAdapter(ModelBase):
         return test
 
     def _padding_time_stamp_mark(
-        self, time_stamps_list: np.ndarray, padding_len: int
+            self, time_stamps_list: np.ndarray, padding_len: int
     ) -> np.ndarray:
         """
         Padding time stamp mark for prediction.
@@ -241,7 +241,7 @@ class LLMAdapter(ModelBase):
 
 
     def forecast_fit(
-        self, train_valid_data: pd.DataFrame, train_ratio_in_tv: float
+            self, train_valid_data: pd.DataFrame, train_ratio_in_tv: float
     ) -> "ModelBase":
         return None
 
@@ -250,25 +250,25 @@ class LLMAdapter(ModelBase):
         return None
 
     def batch_forecast(
-        self, horizon: int, batch_maker: BatchMaker, **kwargs
+            self, horizon: int, batch_maker: BatchMaker, **kwargs
     ) -> np.ndarray:
         return None
 
     def _perform_rolling_predictions(
-        self,
-        horizon: int,
-        input_np: np.ndarray,
-        all_mark: np.ndarray,
-        device: torch.device,
+            self,
+            horizon: int,
+            input_np: np.ndarray,
+            all_mark: np.ndarray,
+            device: torch.device,
     ) -> list:
         return None
 
     def _get_rolling_data(
-        self,
-        input_np: np.ndarray,
-        output: Optional[np.ndarray],
-        all_mark: np.ndarray,
-        rolling_time: int,
+            self,
+            input_np: np.ndarray,
+            output: Optional[np.ndarray],
+            all_mark: np.ndarray,
+            rolling_time: int,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         return None
 
@@ -350,7 +350,7 @@ class LLMAdapter(ModelBase):
             p.numel() for p in self.model.parameters()
         )
         print(f"Total parameters: {total_params}")
-        
+
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Define the loss function and optimizer
@@ -524,7 +524,7 @@ class LLMAdapter(ModelBase):
         return preds, test_energy
 
 def generate_model_factory(
-    model_name: str, model_class: type, required_args: dict
+        model_name: str, model_class: type, required_args: dict
 ) -> Dict:
     """
     Generate model factory information for creating Transformer Adapters model adapters.

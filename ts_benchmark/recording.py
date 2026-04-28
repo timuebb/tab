@@ -50,9 +50,9 @@ def read_record_file(fn: str) -> pd.DataFrame:
 
 
 def write_record_file(
-    result_df: pd.DataFrame,
-    file_path: str,
-    compress_method: Optional[str] = None,
+        result_df: pd.DataFrame,
+        file_path: str,
+        compress_method: Optional[str] = None,
 ) -> str:
     """
     Write to a single record file.
@@ -80,7 +80,7 @@ def write_record_file(
 
 
 def load_record_data(
-    record_files: List[str], drop_columns: Optional[List[str]] = None
+        record_files: List[str], drop_columns: Optional[List[str]] = None
 ) -> pd.DataFrame:
     """
     Loads benchmarking records from multiple record files.
@@ -147,7 +147,7 @@ def _get_default_result_root() -> str:
 
 
 def save_log(
-    result_df: pd.DataFrame, save_path, file_prefix: str, compress_method: str = "gz"
+        result_df: pd.DataFrame, save_path, file_prefix: str, compress_method: str = "gz"
 ) -> str:
     """
     Save log data.

@@ -107,7 +107,7 @@ class AnomalyAttention(nn.Module):
         if self.output_attention:
             return (V.contiguous(), series, prior, sigma)
         else:
-            return (V.contiguous(), None)        
+            return (V.contiguous(), None)
 
 class AttentionLayer(nn.Module):
     def __init__(self, attention, d_model, n_heads, d_keys=None,

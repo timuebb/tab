@@ -16,10 +16,10 @@ from ts_benchmark.utils.s3_utils import get_checkpoint_path
 
 class Chronos(nn.Module):
     def __init__(
-        self,
-        config,
-        model_size: str = 'base',
-        **kwargs
+            self,
+            config,
+            model_size: str = 'base',
+            **kwargs
     ):
         super().__init__(**kwargs)
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -36,15 +36,15 @@ class Chronos(nn.Module):
             torch_dtype=torch.bfloat16,
         )
 
-    def forward(self, inputs):  
+    def forward(self, inputs):
 
-        
+
         B, _, K = inputs.shape
         inputs = rearrange(inputs, 'b l k -> (b k) l').cpu()
 
         context = [inputs[i] for i in range(B*K)]
 
-        inner_batch_size = 12 
+        inner_batch_size = 12
 
         forecast_samples = []
 
@@ -57,7 +57,7 @@ class Chronos(nn.Module):
                 limit_prediction_length=False
             )
             forecast_samples.append(batch_forecast_samples)
-        
+
         forecast_samples = torch.cat(forecast_samples, dim=0)
         prob_forecast = rearrange(forecast_samples, '(b k) s l -> b s l k', b=B, k=K)
 

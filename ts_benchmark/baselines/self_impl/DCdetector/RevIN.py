@@ -33,7 +33,7 @@ class RevIN(nn.Module):
         dim2reduce = tuple(range(1, x.ndim-1))
         self.mean = torch.mean(x, dim=dim2reduce, keepdim=True).detach()
         self.stdev = torch.sqrt(torch.var(x, dim=dim2reduce, keepdim=True, unbiased=False) + self.eps).detach()
-            
+
 
     def _normalize(self, x):
         x = x - self.mean

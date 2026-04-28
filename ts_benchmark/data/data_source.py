@@ -30,10 +30,10 @@ class DataSource:
     DATASET_CLASS = Dataset
 
     def __init__(
-        self,
-        data_dict: Optional[Dict[str, pd.DataFrame]] = None,
-        covariate_dict: Optional[Dict[str, Dict]] = None,
-        metadata: Optional[pd.DataFrame] = None,
+            self,
+            data_dict: Optional[Dict[str, pd.DataFrame]] = None,
+            covariate_dict: Optional[Dict[str, Dict]] = None,
+            metadata: Optional[pd.DataFrame] = None,
     ):
         """
         initializer

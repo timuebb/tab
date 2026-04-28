@@ -2,12 +2,13 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from ts_benchmark.utils.s3_utils import get_checkpoint_path
 # import sys
 # sys.path.insert(0, "ts_benchmark/baselines/LLM/submodel/UniTime/models")
 
 from unitimegpt2 import UniTimeGPT2
 from transformers import GPT2Tokenizer, GPT2Config
-from ts_benchmark.utils.s3_utils import get_checkpoint_path
 
 class FlattenHead(nn.Module):
     def __init__(self, fea_num, pred_len, head_dropout):
