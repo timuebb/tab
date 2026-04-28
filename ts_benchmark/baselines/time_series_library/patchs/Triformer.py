@@ -268,7 +268,7 @@ class WeightGenerator(nn.Module):
         if self.factorized:
             self.memory = nn.Parameter(
                 torch.randn(num_nodes, mem_dim), requires_grad=True
-            ).to("cuda:0")
+            )
             self.generator = self.generator = nn.Sequential(
                 *[
                     nn.Linear(mem_dim, 64),
