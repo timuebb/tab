@@ -11,3 +11,6 @@ scripts/dih_connect/.env
 docker/*
 docker
 *.crt
+__pycache__/
+*.pyc
+*.pyo
